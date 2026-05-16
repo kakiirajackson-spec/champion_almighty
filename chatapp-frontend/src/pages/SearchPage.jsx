@@ -43,7 +43,7 @@ const SearchPage = ({ onViewProfile }) => {
     setLoadingFollow(prev => ({ ...prev, [u.id]: true }));
     const isFollowing = followStatus[u.id];
     try {
-      await fetch(`http://localhost:5000/api/follows/${u.id}`, {
+      await fetch(`https://champion-almighty.onrender.com/api/follows/${u.id}`, {
         method: isFollowing ? 'DELETE' : 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
