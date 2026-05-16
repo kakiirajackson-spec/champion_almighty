@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Plus, X, UserPlus } from 'lucide-react';
+import { API, BACKEND_URL } from '../api';
 
-const API = 'http://localhost:5000';
 
 const HomeFeed = ({ token, currentUser, onViewProfile }) => {
   const [posts, setPosts] = useState([]);

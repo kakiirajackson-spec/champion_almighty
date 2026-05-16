@@ -2,8 +2,8 @@ import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Grid, Bookmark, Film, UserSquare, X, Settings, LogOut, ArrowLeft, MessageCircle, Camera } from 'lucide-react';
 import { useSocket } from '../contexts/SocketContext';
+import { API, BACKEND_URL } from '../api';
 
-const API = 'http://localhost:5000/api';
 
 function authHeaders() {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` };
@@ -16,7 +16,7 @@ function Avatar({ src, username, size = 'md' }) {
   const sizes = { sm: 40, md: 48, lg: 80, xl: 112 };
   const px = sizes[size] || 48;
   return src ? (
-    <img src={`http://localhost:5000${src}`} alt={username}
+    <img src={`${BACKEND_URL}${src}`} alt={username}
       style={{ width: px, height: px, borderRadius: '50%', objectFit: 'cover', display: 'block', flexShrink: 0 }} />
   ) : (
     <div style={{ width: px, height: px, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: px * 0.35 }}>
@@ -86,8 +86,8 @@ function PostModal({ post, onClose, onDelete, isOwn }) {
           <X size={18} />
         </button>
         {post.media_type === 'video'
-          ? <video src={`http://localhost:5000${post.media_url}`} controls style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', background: '#000', display: 'block' }} />
-          : <img src={`http://localhost:5000${post.media_url}`} alt="post" style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', background: '#000', display: 'block' }} />
+          ? <video src={`${BACKEND_URL}${post.media_url}`} controls style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', background: '#000', display: 'block' }} />
+          : <img src={`${BACKEND_URL}${post.media_url}`} alt="post" style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', background: '#000', display: 'block' }} />
         }
         <div style={{ padding: '12px 16px' }}>
           {post.caption && <p style={{ color: '#fff', fontSize: 14, marginBottom: 8 }}>{post.caption}</p>}
@@ -421,8 +421,8 @@ export default function Profile({ userId, token, currentUser, onBack, onGoToDMs,
                   style={{ position: 'relative', paddingBottom: '100%', background: 'none', border: 'none', cursor: 'pointer', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', inset: 0 }}>
                     {post.media_type === 'video'
-                      ? <video src={`http://localhost:5000${post.media_url}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <img src={`http://localhost:5000${post.media_url}`} alt="post" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <video src={`${BACKEND_URL}${post.media_url}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <img src={`${BACKEND_URL}${post.media_url}`} alt="post" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     }
                   </div>
                 </button>

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Heart, MessageCircle, Send, Volume2, VolumeX, MoreHorizontal } from 'lucide-react';
+import { API, BACKEND_URL } from '../api';
 
 const Reels = ({ token, currentUser }) => {
   const [reels, setReels] = useState([]);
@@ -9,7 +10,7 @@ const Reels = ({ token, currentUser }) => {
 
   const fetchReels = async () => {
     try {
-      const res = await fetch('http://localhost:5000/api/posts/feed', { headers: { Authorization: `Bearer ${token}` } });
+      const res = await fetch(`${API}/posts/feed`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
       setReels(Array.isArray(data) ? data.filter(p => p.media_type === 'video') : []);
     } catch (err) { console.error(err); }
@@ -17,7 +18,7 @@ const Reels = ({ token, currentUser }) => {
 
   const handleLike = async (postId, isLiked) => {
     try {
-      await fetch(`http://localhost:5000/api/likes/${postId}`, {
+      await fetch(`${API}/likes/${postId}`, {
         method: isLiked ? 'DELETE' : 'POST',
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -37,7 +38,7 @@ const Reels = ({ token, currentUser }) => {
     <div className="h-full overflow-y-scroll snap-y snap-mandatory">
       {reels.map(reel => (
         <div key={reel.id} className="relative h-screen snap-start flex items-center bg-black">
-          <video src={`http://localhost:5000${reel.media_url}`}
+          <video src={`${BACKEND_URL}${reel.media_url}`}
             className="w-full h-full object-cover" loop autoPlay muted={muted} playsInline />
 
           {/* Gradient overlay */}

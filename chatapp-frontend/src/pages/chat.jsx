@@ -1,7 +1,8 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { API, SOCKET_URL } from '../api';
 
-const socket = io('http://localhost:5000');
+const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
 
 const Chat = ({ conversation, token, currentUser }) => {
   const [messages, setMessages] = useState([]);
@@ -41,7 +42,7 @@ const Chat = ({ conversation, token, currentUser }) => {
 
   const fetchMessages = async () => {
     try {
-      const res = await fetch(`http://localhost:5000/api/messages/${conversation.id}`, {
+      const res = await fetch(`${API}/messages/${conversation.id}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -56,7 +57,7 @@ const Chat = ({ conversation, token, currentUser }) => {
     if (!newMessage.trim()) return;
 
     try {
-      const res = await fetch(`http://localhost:5000/api/messages/${conversation.id}`, {
+      const res = await fetch(`${API}/messages/${conversation.id}`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

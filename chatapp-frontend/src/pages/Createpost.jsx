@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { ArrowLeft, Image, Film } from 'lucide-react';
+import { API } from '../api';
 
 const CreatePost = ({ token, currentUser, onDone }) => {
   const [step, setStep] = useState(1);
@@ -23,7 +24,7 @@ const CreatePost = ({ token, currentUser, onDone }) => {
     formData.append('media', file);
     formData.append('caption', caption);
     try {
-      await fetch('http://localhost:5000/api/posts', {
+      await fetch(`${API}/posts`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${token}` },
         body: formData

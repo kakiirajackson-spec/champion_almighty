@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { io } from 'socket.io-client';
+import { SOCKET_URL } from '../api';
 
 const SocketContext = createContext(null);
 
@@ -15,7 +16,7 @@ export function SocketProvider({ children }) {
 
     const user = JSON.parse(userRaw);
 
-    const newSocket = io('http://localhost:5000', {
+    const newSocket = io(SOCKET_URL, {
       transports: ['websocket', 'polling'],
     });
 

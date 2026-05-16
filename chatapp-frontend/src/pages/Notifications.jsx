@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Heart, UserPlus, MessageCircle, RefreshCw } from 'lucide-react';
+import { API, BACKEND_URL } from '../api';
 
-const API = 'http://localhost:5000/api';
 
 function authHeaders() {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` };
@@ -19,7 +19,7 @@ function timeAgo(dateStr) {
 
 function Avatar({ src, username, size = 44 }) {
   return src ? (
-    <img src={`http://localhost:5000${src}`} alt={username}
+    <img src={`${BACKEND_URL}${src}`} alt={username}
       style={{ width: size, height: size, borderRadius: '50%', objectFit: 'cover', flexShrink: 0 }} />
   ) : (
     <div style={{ width: size, height: size, borderRadius: '50%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: size * 0.35, flexShrink: 0 }}>
@@ -186,7 +186,7 @@ export default function Notifications({ token, currentUser, onViewProfile }) {
 
                 {/* Post thumbnail for likes/comments */}
                 {n.postThumb && (
-                  <img src={`http://localhost:5000${n.postThumb}`} alt="post"
+                  <img src={`${BACKEND_URL}${n.postThumb}`} alt="post"
                     style={{ width: 44, height: 44, objectFit: 'cover', borderRadius: 6, flexShrink: 0 }} />
                 )}
 

@@ -9,6 +9,7 @@ import Profile from './Profile';
 import CreatePost from './CreatePost';
 import Notifications from './Notifications';
 import Settings from './Settings';
+import { BACKEND_URL } from '../api';
 
 const Dashboard = () => {
   const navigate = useNavigate();
@@ -77,7 +78,7 @@ const Dashboard = () => {
   const SidebarAvatar = () => (
     <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, boxShadow: active === 'profile' ? '0 0 0 2px #fff' : 'none' }}>
       {profilePic
-        ? <img src={`http://localhost:5000${profilePic}`} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        ? <img src={`${BACKEND_URL}${profilePic}`} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
         : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff' }}>
             {user?.username?.[0]?.toUpperCase()}
           </div>
@@ -208,7 +209,7 @@ const Dashboard = () => {
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
             <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', boxShadow: active === 'profile' ? '0 0 0 2px #fff' : 'none' }}>
               {profilePic
-                ? <img src={`http://localhost:5000${profilePic}`} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                ? <img src={`${BACKEND_URL}${profilePic}`} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                 : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff' }}>
                     {user?.username?.[0]?.toUpperCase()}
                   </div>

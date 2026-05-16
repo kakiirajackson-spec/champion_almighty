@@ -5,8 +5,7 @@ import {
   Info, Shield, Trash2, LogOut, ChevronRight, Smartphone,
   Heart, BookMarked, Clock, Languages, EyeOff
 } from 'lucide-react';
-
-const API = 'http://localhost:5000/api';
+import { API, BACKEND_URL } from '../api';
 
 function authHeaders() {
   return {
@@ -122,7 +121,7 @@ function PersonalInfo({ onBack }) {
         <div style={{ display: 'flex', alignItems: 'center', gap: 16, padding: 16, background: '#09090b', borderRadius: 14, border: '1px solid #27272a' }}>
           <div style={{ width: 56, height: 56, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 22, color: '#fff' }}>
             {stored.profile_picture
-              ? <img src={`http://localhost:5000${stored.profile_picture}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <img src={`${BACKEND_URL}${stored.profile_picture}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
               : stored.username?.[0]?.toUpperCase()
             }
           </div>
@@ -452,7 +451,7 @@ export default function Settings({ onBack }) {
       <div style={{ margin: '16px 16px 8px', background: '#09090b', borderRadius: 14, border: '1px solid #27272a', padding: '14px 16px', display: 'flex', alignItems: 'center', gap: 14 }}>
         <div style={{ width: 48, height: 48, borderRadius: '50%', flexShrink: 0, overflow: 'hidden', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 20, color: '#fff' }}>
           {user.profile_picture
-            ? <img src={`http://localhost:5000${user.profile_picture}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+            ? <img src={`${BACKEND_URL}${user.profile_picture}`} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             : user.username?.[0]?.toUpperCase()
           }
         </div>

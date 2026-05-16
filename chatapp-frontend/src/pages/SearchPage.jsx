@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Search, X, UserCheck, UserPlus } from 'lucide-react';
+import { API } from '../api';
 
 const SearchPage = ({ onViewProfile }) => {
   const [query, setQuery] = useState('');
@@ -15,7 +16,7 @@ const SearchPage = ({ onViewProfile }) => {
     setQuery(q);
     if (!q.trim()) { setResults([]); return; }
     try {
-      const res = await fetch(`http://localhost:5000/api/users/search?q=${q}`, {
+      const res = await fetch(`${API}/users/search?q=${q}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
       const data = await res.json();
@@ -26,7 +27,7 @@ const SearchPage = ({ onViewProfile }) => {
       const statuses = {};
       await Promise.all(users.map(async (u) => {
         try {
-          const r = await fetch(`http://localhost:5000/api/follows/check/${u.id}`, {
+          const r = await fetch(`${API}/follows/check/${u.id}`, {
             headers: { Authorization: `Bearer ${token}` }
           });
           const d = await r.json();
@@ -120,7 +121,7 @@ const SearchPage = ({ onViewProfile }) => {
                 <div style={{ position: 'relative', flexShrink: 0 }}>
                   {u.profile_picture ? (
                     <img
-                      src={`http://localhost:5000${u.profile_picture}`}
+                      src={`${BACKEND_URL}${u.profile_picture}`}
                       alt={u.username}
                       style={{ width: 48, height: 48, borderRadius: '50%', objectFit: 'cover' }}
                     />

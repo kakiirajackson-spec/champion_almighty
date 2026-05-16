@@ -5,8 +5,7 @@ import {
   Smile, Image, Heart, Check, CheckCheck,
   Phone, Video, Info, ArrowLeft
 } from 'lucide-react';
-
-const API = 'http://localhost:5000/api';
+import { API, BACKEND_URL } from '../api';
 
 function authHeaders() {
   return {
@@ -55,7 +54,7 @@ function Avatar({ src, username, size = 10, online = false }) {
   return (
     <div className="relative shrink-0">
       {src ? (
-        <img src={`http://localhost:5000${src}`} alt={username} className={`${px} rounded-full object-cover`} />
+        <img src={`${BACKEND_URL}${src}`} alt={username} className={`${px} rounded-full object-cover`} />
       ) : (
         <div className={`${px} rounded-full bg-zinc-700 flex items-center justify-center font-bold text-white`}>
           {initials}

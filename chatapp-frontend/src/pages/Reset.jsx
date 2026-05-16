@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Lock } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { API } from '../api';
 
 const Reset = () => {
   const [email, setEmail] = useState('');
@@ -11,7 +12,7 @@ const Reset = () => {
     e.preventDefault();
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/reset', {
+      const response = await fetch(`${API}/auth/reset`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email }),

@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { API } from '../api';
 
 const Register = () => {
   const navigate = useNavigate();
@@ -30,7 +31,7 @@ const Register = () => {
     setUsernameStatus('checking');
     const timer = setTimeout(async () => {
       try {
-        const res = await fetch(`http://localhost:5000/api/auth/check-username?username=${username}`);
+        const res = await fetch(`${API}/auth/check-username?username=${username}`);
         const data = await res.json();
         setUsernameStatus(data.available ? 'available' : 'taken');
       } catch {
@@ -47,7 +48,7 @@ const Register = () => {
     if (usernameStatus === 'invalid') return alert('Username is invalid.');
     setLoading(true);
     try {
-      const response = await fetch('http://localhost:5000/api/auth/register', {
+      const response = await fetch(`${API}/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
