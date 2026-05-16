@@ -33,12 +33,36 @@ router.get('/feed', authMiddleware, async (req, res) => {
         (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = ?) AS is_liked
        FROM posts p
        INNER JOIN users u ON p.user_id = u.id
+       WHERE p.user_id IN (
+         SELECT following_id FROM follows WHERE follower_id = ?
+       ) OR p.user_id = ?
        ORDER BY p.created_at DESC`,
-      [req.user.id]
+      [req.user.id, req.user.id, req.user.id]
     );
     res.json(posts);
   } catch (err) {
     console.error('Feed error:', err);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// GET /api/posts/popular — all posts by likes (shown when feed is empty)
+router.get('/popular', authMiddleware, async (req, res) => {
+  try {
+    const [posts] = await db.query(
+      `SELECT p.*, u.username, u.profile_picture,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id) AS likes_count,
+        (SELECT COUNT(*) FROM comments WHERE post_id = p.id) AS comments_count,
+        (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = ?) AS is_liked
+       FROM posts p
+       INNER JOIN users u ON p.user_id = u.id
+       ORDER BY likes_count DESC, p.created_at DESC
+       LIMIT 20`,
+      [req.user.id]
+    );
+    res.json(posts);
+  } catch (err) {
+    console.error('Popular posts error:', err);
     res.status(500).json({ message: 'Server error.' });
   }
 });
