@@ -8,25 +8,14 @@ require('dotenv').config();
 const app = express();
 const server = http.createServer(app);
 
-const CLIENT_URL = process.env.CLIENT_URL || 'http://localhost:5173';
-const allowedOrigins = [CLIENT_URL, 'http://localhost:5173'].filter(Boolean);
-
 const io = new Server(server, {
   cors: {
-    origin: allowedOrigins,
+    origin: '*',
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    credentials: true,
   }
 });
 
-app.use(cors({
-  origin: (origin, callback) => {
-    if (!origin || allowedOrigins.includes(origin)) callback(null, true);
-    else callback(new Error('Not allowed by CORS'));
-  },
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  credentials: true,
-}));
+app.use(cors({ origin: '*' }));
 app.use(express.json());
 
 // Serve uploaded files as static
@@ -50,7 +39,6 @@ const onlineUsers = new Map();
 io.on('connection', (socket) => {
   console.log('🔌 Connected:', socket.id);
 
-  // Send the current online users to the newly connected client.
   socket.emit('online_users', Array.from(onlineUsers.keys()));
 
   socket.on('user_online', (userId) => {
