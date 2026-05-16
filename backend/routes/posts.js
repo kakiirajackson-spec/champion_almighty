@@ -33,11 +33,8 @@ router.get('/feed', authMiddleware, async (req, res) => {
         (SELECT COUNT(*) FROM likes WHERE post_id = p.id AND user_id = ?) AS is_liked
        FROM posts p
        INNER JOIN users u ON p.user_id = u.id
-       WHERE p.user_id IN (
-         SELECT following_id FROM follows WHERE follower_id = ?
-       ) OR p.user_id = ?
        ORDER BY p.created_at DESC`,
-      [req.user.id, req.user.id, req.user.id]
+      [req.user.id]
     );
     res.json(posts);
   } catch (err) {
