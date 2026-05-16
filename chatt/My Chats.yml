@@ -1,0 +1,18 @@
+info:
+  name: My Chats
+  type: http
+  seq: 5
+
+http:
+  method: GET
+  url: http://localhost:5000/api/conversations
+  headers:
+    - name: Authorization
+      value: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJhbG1pZ2h0eSIsImVtYWlsIjoiYWxtaWdodHlAdGVzdC5jb20iLCJpYXQiOjE3NzgxNTMxMjYsImV4cCI6MTc3ODc1NzkyNn0.W6IwUMObWICRDO_gm8CVmWZeTzJc2KP_NwHxrkgzOfk
+  auth: inherit
+
+settings:
+  encodeUrl: true
+  timeout: 0
+  followRedirects: true
+  maxRedirects: 5
