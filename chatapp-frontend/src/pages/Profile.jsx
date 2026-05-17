@@ -4,7 +4,6 @@ import { Grid, Bookmark, Film, UserSquare, X, Settings, LogOut, ArrowLeft, Messa
 import { useSocket } from '../contexts/SocketContext';
 import { API, BACKEND_URL } from '../api';
 
-
 function authHeaders() {
   return { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` };
 }
@@ -12,11 +11,19 @@ function getMe() {
   try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
 }
 
+// Smart image URL — handles both Cloudinary (http) and local (/uploads/...)
+const imgSrc = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${BACKEND_URL}${url}`;
+};
+
+// ── Avatar ───────────────────────────────────────────────────────
 function Avatar({ src, username, size = 'md' }) {
   const sizes = { sm: 40, md: 48, lg: 80, xl: 112 };
   const px = sizes[size] || 48;
   return src ? (
-    <img src={`${BACKEND_URL}${src}`} alt={username}
+    <img src={imgSrc(src)} alt={username}
       style={{ width: px, height: px, borderRadius: '50%', objectFit: 'cover', display: 'block', flexShrink: 0 }} />
   ) : (
     <div style={{ width: px, height: px, borderRadius: '50%', flexShrink: 0, background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: px * 0.35 }}>
@@ -86,8 +93,8 @@ function PostModal({ post, onClose, onDelete, isOwn }) {
           <X size={18} />
         </button>
         {post.media_type === 'video'
-          ? <video src={`${BACKEND_URL}${post.media_url}`} controls style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', background: '#000', display: 'block' }} />
-          : <img src={`${BACKEND_URL}${post.media_url}`} alt="post" style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', background: '#000', display: 'block' }} />
+          ? <video src={imgSrc(post.media_url)} controls style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', background: '#000', display: 'block' }} />
+          : <img src={imgSrc(post.media_url)} alt="post" style={{ width: '100%', maxHeight: '70vh', objectFit: 'contain', background: '#000', display: 'block' }} />
         }
         <div style={{ padding: '12px 16px' }}>
           {post.caption && <p style={{ color: '#fff', fontSize: 14, marginBottom: 8 }}>{post.caption}</p>}
@@ -254,8 +261,7 @@ export default function Profile({ userId, token, currentUser, onBack, onGoToDMs,
     setFollowersLoading(true);
     try {
       const res = await fetch(`${API}/follows/my/followers`, { headers: authHeaders() });
-      const data = await res.json();
-      setProfileFollowers(Array.isArray(data) ? data : []);
+      setProfileFollowers(await res.json());
     } catch (err) { console.error(err); }
     finally { setFollowersLoading(false); }
   };
@@ -265,8 +271,7 @@ export default function Profile({ userId, token, currentUser, onBack, onGoToDMs,
     setFollowingLoading(true);
     try {
       const res = await fetch(`${API}/follows/my/following`, { headers: authHeaders() });
-      const data = await res.json();
-      setProfileFollowing(Array.isArray(data) ? data : []);
+      setProfileFollowing(await res.json());
     } catch (err) { console.error(err); }
     finally { setFollowingLoading(false); }
   };
@@ -300,10 +305,6 @@ export default function Profile({ userId, token, currentUser, onBack, onGoToDMs,
     localStorage.removeItem('token');
     localStorage.removeItem('user');
     navigate('/login');
-  };
-
-  const handleMessage = () => {
-    if (onGoToDMs) onGoToDMs(targetId);
   };
 
   if (viewingUserId) {
@@ -343,7 +344,6 @@ export default function Profile({ userId, token, currentUser, onBack, onGoToDMs,
           </div>
           {isOwnProfile && (
             <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-              {/* ⚙️ now opens Settings page */}
               <button onClick={() => onSettings && onSettings()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', padding: 0, display: 'flex' }}>
                 <Settings size={22} />
               </button>
@@ -374,19 +374,17 @@ export default function Profile({ userId, token, currentUser, onBack, onGoToDMs,
                 </button>
               </div>
               {profile?.bio && <p style={{ fontSize: 13, color: '#d4d4d8', marginBottom: 12, whiteSpace: 'pre-wrap' }}>{profile.bio}</p>}
-
               {isOwnProfile ? (
                 <button onClick={() => setShowEditModal(true)} style={{ padding: '7px 20px', background: '#27272a', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
                   Edit profile
                 </button>
               ) : (
                 <div style={{ display: 'flex', gap: 8 }}>
-                  <button
-                    onClick={() => isFollowing ? handleUnfollow(targetId) : handleFollow(targetId)}
+                  <button onClick={() => isFollowing ? handleUnfollow(targetId) : handleFollow(targetId)}
                     style={{ padding: '7px 20px', background: isFollowing ? '#27272a' : '#2563eb', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', minWidth: 110 }}>
                     {isFollowing ? 'Following' : theyFollowMe ? 'Follow back' : 'Follow'}
                   </button>
-                  <button onClick={handleMessage}
+                  <button onClick={() => onGoToDMs && onGoToDMs(targetId)}
                     style={{ padding: '7px 20px', background: '#27272a', border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
                     <MessageCircle size={15} /> Message
                   </button>
@@ -421,8 +419,8 @@ export default function Profile({ userId, token, currentUser, onBack, onGoToDMs,
                   style={{ position: 'relative', paddingBottom: '100%', background: 'none', border: 'none', cursor: 'pointer', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', inset: 0 }}>
                     {post.media_type === 'video'
-                      ? <video src={`${BACKEND_URL}${post.media_url}`} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <img src={`${BACKEND_URL}${post.media_url}`} alt="post" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      ? <video src={imgSrc(post.media_url)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                      : <img src={imgSrc(post.media_url)} alt="post" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                     }
                   </div>
                 </button>
