@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://localhost:5000/api/messages/1
+  url: https://champion-almighty.onrender.com/api/messages/1
   headers:
     - name: Authorization
       value: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MSwidXNlcm5hbWUiOiJjaGFtcGlvbiIsImVtYWlsIjoiY2hhbXBpb25AdGVzdC5jb20iLCJpYXQiOjE3NzgxNTI4NDQsImV4cCI6MTc3ODc1NzY0NH0.J1-bwcw3mvNYufzQLADxTDR97VciEAM7ZPw1bvjWU6k

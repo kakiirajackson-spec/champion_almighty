@@ -5,7 +5,7 @@ info:
 
 http:
   method: POST
-  url: http://localhost:5000/api/follows/1
+  url: https://champion-almighty.onrender.com/api/follows/1
   headers:
     - name: Authorization
       value: Bear eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6MiwidXNlcm5hbWUiOiJhbG1pZ2h0eSIsImVtYWlsIjoiYWxtaWdodHlAdGVzdC5jb20iLCJpYXQiOjE3NzgxNTMxMjYsImV4cCI6MTc3ODc1NzkyNn0.W6IwUMObWICRDO_gm8CVmWZeTzJc2KP_NwHxrkgzOfk
