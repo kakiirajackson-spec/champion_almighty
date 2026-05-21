@@ -3,7 +3,7 @@ import { useSocket } from '../contexts/SocketContext';
 import {
   Edit, ChevronDown, X, Search, Send,
   Smile, Image, Heart, Check, CheckCheck,
-  Phone, Video, Info, ArrowLeft
+  Phone, Video, Info, ArrowLeft, Mic, Paperclip
 } from 'lucide-react';
 import { API, BACKEND_URL } from '../api';
 
@@ -18,7 +18,6 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
 }
 
-// Smart image URL — handles Cloudinary (http) and local (/uploads/...)
 const imgSrc = (url) => {
   if (!url) return null;
   if (url.startsWith('http')) return url;
@@ -55,7 +54,6 @@ function formatDateHeader(dateString) {
   return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
-// ── Avatar — only shows green dot if actually online ─────────────
 function Avatar({ src, username, size = 10, online = false }) {
   const initials = username ? username[0].toUpperCase() : '?';
   const px = { 8: 32, 10: 40, 12: 48, 16: 64 }[size] || 40;
@@ -79,7 +77,6 @@ function Avatar({ src, username, size = 10, online = false }) {
           {initials}
         </div>
       )}
-      {/* Only show green dot if online is TRUE */}
       {online === true && (
         <span style={{
           position: 'absolute', bottom: 0, right: 0,
@@ -101,6 +98,42 @@ function TypingIndicator() {
   );
 }
 
+// ── Inline Emoji Picker Component ───────────────────────────────
+const EMOJIS = [
+  '😀','😂','🥰','😍','🤣','😊','😎','🥳','😏','🤔',
+  '😢','😭','😤','🤯','🥺','😴','🤗','😇','🤩','😱',
+  '👍','👎','❤️','🔥','💯','🎉','✨','👏','🙌','💪',
+  '😆','🤭','🫡','🥹','😅','🫠','🤪','😜','🤑','😋',
+  '🐶','🐱','🐻','🦁','🐼','🦊','🐸','🐙','🦋','🌸',
+  '🍕','🍔','🎂','🍦','🍿','☕','🍵','🥤','🍜','🍣',
+  '⚽','🏀','🎮','🎵','🎶','🎸','🎹','🎤','📱','💻',
+  '🌍','🌈','⭐','🌙','☀️','❄️','🌊','🏔️','🌺','🍀',
+];
+
+function EmojiPicker({ onSelect, onClose }) {
+  return (
+    <div className="absolute bottom-16 left-4 bg-zinc-950 border border-zinc-800 rounded-2xl p-3 z-50 w-72 shadow-2xl">
+      <div className="flex justify-between items-center mb-2 px-1">
+        <span className="text-zinc-400 text-xs font-semibold tracking-wide uppercase">Emojis</span>
+        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300 transition-colors">
+          <X className="w-4 h-4" />
+        </button>
+      </div>
+      <div className="grid grid-template grid-cols-8 gap-1 max-h-48 overflow-y-auto pr-1">
+        {EMOJIS.map(emoji => (
+          <button
+            key={emoji}
+            onClick={() => onSelect(emoji)}
+            className="text-2xl p-1 rounded-lg hover:bg-zinc-800 transition-colors active:scale-95"
+          >
+            {emoji}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 // ── Conversation List ────────────────────────────────────────────
 function ConversationList({ conversations, loading, activeId, onSelect, onNewMessage }) {
   const user = getUser();
@@ -113,7 +146,6 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
 
   return (
     <div className="flex flex-col h-full border-r border-zinc-800 bg-black">
-      {/* Header */}
       <div className="flex items-center justify-between px-4 py-4 border-b border-zinc-800">
         <div className="flex items-center gap-1">
           <h1 className="text-xl font-bold text-white">{user?.username}</h1>
@@ -124,7 +156,6 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
         </button>
       </div>
 
-      {/* Filter tabs */}
       <div className="flex gap-2 px-4 py-3 border-b border-zinc-800">
         {['all', 'unread'].map(f => (
           <button
@@ -143,7 +174,6 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
         <span className="text-base font-semibold text-white">Messages</span>
       </div>
 
-      {/* List */}
       <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-12 text-zinc-500 text-sm">Loading...</div>
@@ -154,7 +184,6 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
           </div>
         ) : (
           filtered.map(conv => {
-            // Check real-time online status from socket
             const isOnline = onlineUsers?.has?.(Number(conv.other_user_id));
             return (
               <button
@@ -208,34 +237,46 @@ function ChatWindow({ conversation, onBack }) {
   const [text, setText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [typingWho, setTypingWho] = useState('');
+  
+  // Upgraded Feature States
+  const [showEmoji, setShowEmoji] = useState(false);
+  const [isRecording, setIsRecording] = useState(false);
+  const [recordDuration, setRecordDuration] = useState(0);
+
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const fileInputRef = useRef(null);
+  
+  // Media Recorder References
+  const mediaRecorderRef = useRef(null);
+  const audioChunksRef = useRef([]);
+  const durationIntervalRef = useRef(null);
 
-  // Real-time online status from socket
   const isOnline = onlineUsers?.has?.(Number(conversation.other_user_id));
 
-  useEffect(() => {
-    if (!conversation) return;
-    setLoading(true);
-    setMessages([]);
+  const fetchMessages = useCallback(() => {
     fetch(`${API}/messages/${conversation.id}`, { headers: authHeaders() })
       .then(r => r.json())
       .then(data => setMessages(Array.isArray(data) ? data : []))
       .catch(console.error)
       .finally(() => setLoading(false));
-    joinConversation(conversation.id);
   }, [conversation.id]);
+
+  useEffect(() => {
+    if (!conversation) return;
+    setLoading(true);
+    setMessages([]);
+    fetchMessages();
+    joinConversation(conversation.id);
+  }, [conversation.id, fetchMessages, joinConversation]);
 
   useEffect(() => {
     if (!socket) return;
     const onNewMessage = (msg) => {
       const convId = msg.conversation_id ?? msg.conversationId;
-      if (convId === conversation.id && msg.sender_id !== user?.id) {
-        fetch(`${API}/messages/${conversation.id}`, { headers: authHeaders() })
-          .then(r => r.json())
-          .then(data => setMessages(Array.isArray(data) ? data : []))
-          .catch(console.error);
+      if (convId === conversation.id) {
+        fetchMessages();
       }
     };
     const onUserTyping = ({ username }) => { setIsTyping(true); setTypingWho(username); };
@@ -249,7 +290,7 @@ function ChatWindow({ conversation, onBack }) {
       socket.off('user_typing', onUserTyping);
       socket.off('user_stop_typing', onStopTyping);
     };
-  }, [socket, conversation.id]);
+  }, [socket, conversation.id, fetchMessages]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -262,13 +303,22 @@ function ChatWindow({ conversation, onBack }) {
     }
   }, [text]);
 
-  const handleSend = async () => {
-    if (!text.trim()) return;
-    const content = text.trim();
-    setText('');
+  // Cleanup Recording Interval on unmount
+  useEffect(() => {
+    return () => {
+      if (durationIntervalRef.current) clearInterval(durationIntervalRef.current);
+    };
+  }, []);
+
+  const handleSend = async (forcedContent = null) => {
+    const content = forcedContent !== null ? forcedContent : text.trim();
+    if (!content) return;
+    if (forcedContent === null) setText('');
+
     try {
       const res = await fetch(`${API}/messages/${conversation.id}`, {
-        method: 'POST', headers: authHeaders(),
+        method: 'POST',
+        headers: authHeaders(),
         body: JSON.stringify({ content }),
       });
       const newMsg = await res.json();
@@ -276,7 +326,8 @@ function ChatWindow({ conversation, onBack }) {
       if (socket) {
         socket.emit('send_message', {
           conversationId: conversation.id,
-          content, senderId: user.id,
+          content,
+          senderId: user.id,
           receiverId: conversation.other_user_id,
         });
       }
@@ -294,6 +345,115 @@ function ChatWindow({ conversation, onBack }) {
     typingTimeoutRef.current = setTimeout(() => stopTyping(conversation.id), 2000);
   };
 
+  // ── Media/File Upload Handlers ──────────────────────────────────
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    const formData = new FormData();
+    formData.append('media', file);
+
+    try {
+      // Direct Multipart upload endpoint for message media files
+      const res = await fetch(`${API}/messages/${conversation.id}/media`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: formData,
+      });
+
+      if (res.ok) {
+        const newMsg = await res.json();
+        setMessages(prev => [...prev, newMsg]);
+        if (socket) {
+          socket.emit('send_message', {
+            conversationId: conversation.id,
+            content: newMsg.content || 'Sent a file Attachments',
+            senderId: user.id,
+            receiverId: conversation.other_user_id,
+          });
+        }
+      }
+    } catch (err) {
+      console.error('File transfer upload failed:', err);
+    } finally {
+      e.target.value = ''; // Reset file input buffer hook
+    }
+  };
+
+  // ── Audio Recording Procedures ─────────────────────────────────
+  const startAudioRecording = async () => {
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      const mediaRecorder = new MediaRecorder(stream);
+      mediaRecorderRef.current = mediaRecorder;
+      audioChunksRef.current = [];
+
+      mediaRecorder.ondataavailable = (event) => {
+        if (event.data.size > 0) audioChunksRef.current.push(event.data);
+      };
+
+      mediaRecorder.onstop = async () => {
+        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        // Release raw mic hardware system bindings
+        stream.getTracks().forEach(track => track.stop());
+
+        if (audioChunksRef.current.length === 0) return;
+
+        const formData = new FormData();
+        formData.append('media', audioBlob, 'voicenote.webm');
+
+        try {
+          const res = await fetch(`${API}/messages/${conversation.id}/media`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            body: formData,
+          });
+          if (res.ok) {
+            const newMsg = await res.json();
+            setMessages(prev => [...prev, newMsg]);
+            if (socket) {
+              socket.emit('send_message', {
+                conversationId: conversation.id,
+                content: '🎤 Voice note',
+                senderId: user.id,
+                receiverId: conversation.other_user_id,
+              });
+            }
+          }
+        } catch (err) { console.error('Audio upload failed:', err); }
+      };
+
+      mediaRecorder.start();
+      setIsRecording(true);
+      setRecordDuration(0);
+      durationIntervalRef.current = setInterval(() => {
+        setRecordDuration(prev => prev + 1);
+      }, 1000);
+
+    } catch (err) {
+      console.error('Microphone usage access blocked:', err);
+    }
+  };
+
+  const stopAudioRecording = (shouldSend = true) => {
+    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') return;
+
+    clearInterval(durationIntervalRef.current);
+    setIsRecording(false);
+
+    if (!shouldSend) {
+      // Clear data chunks to drop on cancel
+      audioChunksRef.current = [];
+    }
+    mediaRecorderRef.current.stop();
+  };
+
+  const formatDuration = (sec) => {
+    const mins = Math.floor(sec / 60);
+    const secs = sec % 60;
+    return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+  };
+
   const grouped = [];
   let currentDate = '';
   messages.forEach(msg => {
@@ -303,7 +463,7 @@ function ChatWindow({ conversation, onBack }) {
   });
 
   return (
-    <div className="flex flex-col h-full bg-black">
+    <div className="flex flex-col h-full bg-black relative">
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
         <div className="flex items-center gap-3">
@@ -328,7 +488,7 @@ function ChatWindow({ conversation, onBack }) {
         </div>
       </div>
 
-      {/* Messages */}
+      {/* Messages viewport render panel */}
       <div className="flex-1 overflow-y-auto px-4 py-4">
         {loading ? (
           <div className="flex items-center justify-center h-full text-zinc-500 text-sm">Loading messages...</div>
@@ -348,10 +508,37 @@ function ChatWindow({ conversation, onBack }) {
                 {group.msgs.map((msg, i) => {
                   const isOwn = msg.sender_id === user?.id;
                   const showTime = i === group.msgs.length - 1 || group.msgs[i + 1]?.sender_id !== msg.sender_id;
+                  
+                  // Media handling checks
+                  const hasMedia = !!msg.media_url;
+                  const isImg = hasMedia && msg.media_url.match(/\.(jpeg|jpg|gif|png|webp|svg)$/i);
+                  const isVid = hasMedia && msg.media_url.match(/\.(mp4|webm|ogg|mov)$/i);
+                  const isAud = hasMedia && msg.media_url.match(/\.(mp3|wav|ogg|webm|m4a)$/i);
+
                   return (
                     <div key={msg.id} className={`flex flex-col max-w-[70%] mb-1 ${isOwn ? 'self-end items-end ml-auto' : 'self-start items-start'}`}>
-                      <div className={`px-4 py-2 rounded-2xl break-words ${isOwn ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-zinc-800 text-white rounded-bl-sm'}`}>
-                        <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                      <div className={`px-4 py-2 rounded-2xl break-words ${
+                        isOwn ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-zinc-800 text-white rounded-bl-sm'
+                      } ${hasMedia ? 'p-1 overflow-hidden' : ''}`}>
+                        
+                        {isImg && (
+                          <img src={imgSrc(msg.media_url)} alt="Attachment" className="max-w-xs rounded-xl object-cover max-h-64" />
+                        )}
+                        {isVid && (
+                          <video src={imgSrc(msg.media_url)} controls className="max-w-xs rounded-xl max-h-64" />
+                        )}
+                        {isAud && (
+                          <audio src={imgSrc(msg.media_url)} controls className="p-1 max-w-64 invert text-black brightness-100" />
+                        )}
+                        {hasMedia && !isImg && !isVid && !isAud && (
+                          <a href={imgSrc(msg.media_url)} target="_blank" rel="noreferrer" className="underline text-sm flex items-center gap-1 p-2">
+                            <Paperclip className="w-4 h-4 shrink-0" /> Download Shared Resource
+                          </a>
+                        )}
+                        {!hasMedia && (
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        )}
+
                       </div>
                       {showTime && (
                         <div className="flex items-center gap-1 mt-1 px-1">
@@ -378,32 +565,86 @@ function ChatWindow({ conversation, onBack }) {
         )}
       </div>
 
-      {/* Input */}
-      <div className="border-t border-zinc-800 p-4 shrink-0">
-        <div className="flex items-end gap-2 rounded-full border border-zinc-700 bg-zinc-900 px-4 py-2">
-          <button className="text-white hover:text-zinc-400 shrink-0">
-            <Smile className="w-6 h-6" />
-          </button>
-          <textarea
-            ref={textareaRef}
-            value={text}
-            onChange={handleTyping}
-            onKeyDown={handleKeyDown}
-            placeholder="Message..."
-            rows={1}
-            className="flex-1 bg-transparent text-sm text-white placeholder-zinc-500 outline-none resize-none min-h-[24px] max-h-[120px]"
-          />
-          {text.trim() ? (
-            <button onClick={handleSend} className="text-blue-500 font-semibold text-sm shrink-0 hover:text-blue-400">
-              Send
-            </button>
-          ) : (
-            <div className="flex items-center gap-3 shrink-0">
-              <button className="text-white hover:text-zinc-400"><Image className="w-6 h-6" /></button>
-              <button className="text-white hover:text-zinc-400"><Heart className="w-6 h-6" /></button>
+      {/* Conditional Emoji Selection Node */}
+      {showEmoji && (
+        <EmojiPicker 
+          onSelect={(emoji) => {
+            setText(prev => prev + emoji);
+            textareaRef.current?.focus();
+          }} 
+          onClose={() => setShowEmoji(false)} 
+        />
+      )}
+
+      {/* Input Operations Panel */}
+      <div className="border-t border-zinc-800 p-4 shrink-0 bg-black">
+        {isRecording ? (
+          <div className="flex items-center justify-between gap-4 rounded-full border border-red-500 bg-red-950/20 px-4 py-2 text-white animate-pulse">
+            <div className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-red-500" />
+              <span className="text-sm font-medium">Recording Voice Note... {formatDuration(recordDuration)}</span>
             </div>
-          )}
-        </div>
+            <div className="flex items-center gap-2">
+              <button 
+                onClick={() => stopAudioRecording(false)} 
+                className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800 transition-colors"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={() => stopAudioRecording(true)} 
+                className="text-xs font-semibold text-white px-3 py-1 rounded bg-red-600 hover:bg-red-500 transition-colors"
+              >
+                Send
+              </button>
+            </div>
+          </div>
+        ) : (
+          <div className="flex items-end gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2">
+            <button 
+              onClick={() => setShowEmoji(!showEmoji)} 
+              className={`hover:text-zinc-400 shrink-0 mb-0.5 ${showEmoji ? 'text-blue-500' : 'text-white'}`}
+            >
+              <Smile className="w-6 h-6" />
+            </button>
+            
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={handleTyping}
+              onKeyDown={handleKeyDown}
+              placeholder="Message..."
+              rows={1}
+              className="flex-1 bg-transparent text-sm text-white placeholder-zinc-500 outline-none resize-none min-h-[24px] max-h-[120px] py-1"
+            />
+            
+            {text.trim() ? (
+              <button onClick={() => handleSend()} className="text-blue-500 font-semibold text-sm shrink-0 hover:text-blue-400 mb-1">
+                Send
+              </button>
+            ) : (
+              <div className="flex items-center gap-3 shrink-0 mb-0.5">
+                {/* Hidden Universal File Input Link */}
+                <input 
+                  type="file" 
+                  ref={fileInputRef} 
+                  onChange={handleFileUpload} 
+                  className="hidden" 
+                  accept="image/*,video/*,audio/*,application/*"
+                />
+                <button onClick={() => fileInputRef.current?.click()} className="text-white hover:text-zinc-400">
+                  <Image className="w-6 h-6" />
+                </button>
+                <button onClick={startAudioRecording} className="text-white hover:text-zinc-400">
+                  <Mic className="w-6 h-6" />
+                </button>
+                <button onClick={() => handleSend('❤️')} className="text-white hover:text-zinc-400">
+                  <Heart className="w-6 h-6" />
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
     </div>
   );
@@ -417,7 +658,6 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState(null);
 
-  // Load all users on open
   useEffect(() => {
     if (!isOpen) return;
     fetch(`${API}/users/all`, { headers: authHeaders() })
