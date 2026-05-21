@@ -18,6 +18,13 @@ function getUser() {
   try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
 }
 
+// Smart image URL — handles Cloudinary (http) and local (/uploads/...)
+const imgSrc = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${BACKEND_URL}${url}`;
+};
+
 function formatTime(dateString) {
   if (!dateString) return '';
   const date = new Date(dateString);
@@ -48,19 +55,38 @@ function formatDateHeader(dateString) {
   return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
+// ── Avatar — only shows green dot if actually online ─────────────
 function Avatar({ src, username, size = 10, online = false }) {
   const initials = username ? username[0].toUpperCase() : '?';
-  const px = { 8: 'w-8 h-8 text-xs', 10: 'w-10 h-10 text-sm', 12: 'w-12 h-12 text-base', 16: 'w-16 h-16 text-xl' }[size] || 'w-10 h-10 text-sm';
+  const px = { 8: 32, 10: 40, 12: 48, 16: 64 }[size] || 40;
+  const fontSize = px * 0.35;
+
   return (
-    <div className="relative shrink-0">
+    <div style={{ position: 'relative', flexShrink: 0, width: px, height: px }}>
       {src ? (
-        <img src={`${BACKEND_URL}${src}`} alt={username} className={`${px} rounded-full object-cover`} />
+        <img
+          src={imgSrc(src)}
+          alt={username}
+          style={{ width: px, height: px, borderRadius: '50%', objectFit: 'cover', display: 'block' }}
+        />
       ) : (
-        <div className={`${px} rounded-full bg-zinc-700 flex items-center justify-center font-bold text-white`}>
+        <div style={{
+          width: px, height: px, borderRadius: '50%',
+          background: 'linear-gradient(135deg, #a855f7, #ec4899)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center',
+          fontWeight: 700, color: '#fff', fontSize,
+        }}>
           {initials}
         </div>
       )}
-      {online && <span className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-black" />}
+      {/* Only show green dot if online is TRUE */}
+      {online === true && (
+        <span style={{
+          position: 'absolute', bottom: 0, right: 0,
+          width: 12, height: 12, borderRadius: '50%',
+          background: '#22c55e', border: '2px solid #000',
+        }} />
+      )}
     </div>
   );
 }
@@ -79,6 +105,7 @@ function TypingIndicator() {
 function ConversationList({ conversations, loading, activeId, onSelect, onNewMessage }) {
   const user = getUser();
   const [filter, setFilter] = useState('all');
+  const { onlineUsers } = useSocket();
 
   const filtered = filter === 'unread'
     ? conversations.filter(c => c.unread_count > 0)
@@ -126,37 +153,46 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
             <p className="text-zinc-500 text-sm mt-1">Start a new conversation</p>
           </div>
         ) : (
-          filtered.map(conv => (
-            <button
-              key={conv.id}
-              onClick={() => onSelect(conv)}
-              className={`flex w-full items-center gap-3 px-4 py-3 transition-colors text-left ${
-                activeId === conv.id ? 'bg-zinc-900' : 'hover:bg-zinc-900/50'
-              }`}
-            >
-              <Avatar src={conv.other_profile_picture} username={conv.other_username} size={10} online={conv.other_status === 'online'} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm truncate ${conv.unread_count > 0 ? 'font-bold text-white' : 'text-white'}`}>
-                    {conv.other_username}
-                  </span>
-                  {conv.last_message_time && (
-                    <span className="text-xs text-zinc-500 ml-2 shrink-0">{formatTime(conv.last_message_time)}</span>
-                  )}
-                </div>
-                <div className="flex items-center gap-2">
-                  <p className={`text-sm truncate flex-1 ${conv.unread_count > 0 ? 'text-white font-medium' : 'text-zinc-400'}`}>
-                    {conv.last_message || 'Start a conversation'}
-                  </p>
-                  {conv.unread_count > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white">
-                      {conv.unread_count > 99 ? '99+' : conv.unread_count}
+          filtered.map(conv => {
+            // Check real-time online status from socket
+            const isOnline = onlineUsers?.has?.(Number(conv.other_user_id));
+            return (
+              <button
+                key={conv.id}
+                onClick={() => onSelect(conv)}
+                className={`flex w-full items-center gap-3 px-4 py-3 transition-colors text-left ${
+                  activeId === conv.id ? 'bg-zinc-900' : 'hover:bg-zinc-900/50'
+                }`}
+              >
+                <Avatar
+                  src={conv.other_profile_picture}
+                  username={conv.other_username}
+                  size={10}
+                  online={isOnline === true}
+                />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm truncate ${conv.unread_count > 0 ? 'font-bold text-white' : 'text-white'}`}>
+                      {conv.other_username}
                     </span>
-                  )}
+                    {conv.last_message_time && (
+                      <span className="text-xs text-zinc-500 ml-2 shrink-0">{formatTime(conv.last_message_time)}</span>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-sm truncate flex-1 ${conv.unread_count > 0 ? 'text-white font-medium' : 'text-zinc-400'}`}>
+                      {conv.last_message || 'Start a conversation'}
+                    </p>
+                    {conv.unread_count > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white">
+                        {conv.unread_count > 99 ? '99+' : conv.unread_count}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-            </button>
-          ))
+              </button>
+            );
+          })
         )}
       </div>
     </div>
@@ -176,27 +212,23 @@ function ChatWindow({ conversation, onBack }) {
   const textareaRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  const isOnline = onlineUsers?.has?.(conversation.other_user_id);
+  // Real-time online status from socket
+  const isOnline = onlineUsers?.has?.(Number(conversation.other_user_id));
 
-  // Fetch messages
   useEffect(() => {
     if (!conversation) return;
     setLoading(true);
     setMessages([]);
-
     fetch(`${API}/messages/${conversation.id}`, { headers: authHeaders() })
       .then(r => r.json())
       .then(data => setMessages(Array.isArray(data) ? data : []))
       .catch(console.error)
       .finally(() => setLoading(false));
-
     joinConversation(conversation.id);
   }, [conversation.id]);
 
-  // Socket events
   useEffect(() => {
     if (!socket) return;
-
     const onNewMessage = (msg) => {
       const convId = msg.conversation_id ?? msg.conversationId;
       if (convId === conversation.id && msg.sender_id !== user?.id) {
@@ -206,21 +238,12 @@ function ChatWindow({ conversation, onBack }) {
           .catch(console.error);
       }
     };
-
-    const onUserTyping = ({ username }) => {
-      setIsTyping(true);
-      setTypingWho(username);
-    };
-
-    const onStopTyping = () => {
-      setIsTyping(false);
-      setTypingWho('');
-    };
+    const onUserTyping = ({ username }) => { setIsTyping(true); setTypingWho(username); };
+    const onStopTyping = () => { setIsTyping(false); setTypingWho(''); };
 
     socket.on('new_message', onNewMessage);
     socket.on('user_typing', onUserTyping);
     socket.on('user_stop_typing', onStopTyping);
-
     return () => {
       socket.off('new_message', onNewMessage);
       socket.off('user_typing', onUserTyping);
@@ -228,12 +251,10 @@ function ChatWindow({ conversation, onBack }) {
     };
   }, [socket, conversation.id]);
 
-  // Auto-scroll
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // Auto-resize textarea
   useEffect(() => {
     if (textareaRef.current) {
       textareaRef.current.style.height = 'auto';
@@ -245,36 +266,25 @@ function ChatWindow({ conversation, onBack }) {
     if (!text.trim()) return;
     const content = text.trim();
     setText('');
-
     try {
       const res = await fetch(`${API}/messages/${conversation.id}`, {
-        method: 'POST',
-        headers: authHeaders(),
+        method: 'POST', headers: authHeaders(),
         body: JSON.stringify({ content }),
       });
       const newMsg = await res.json();
-      // Add own message locally (with guaranteed created_at from DB)
       setMessages(prev => [...prev, newMsg]);
-
-      // Emit via socket for real-time delivery to OTHER user only
       if (socket) {
         socket.emit('send_message', {
           conversationId: conversation.id,
-          content,
-          senderId: user.id,
+          content, senderId: user.id,
           receiverId: conversation.other_user_id,
         });
       }
-    } catch (err) {
-      console.error('Send failed:', err);
-    }
+    } catch (err) { console.error('Send failed:', err); }
   };
 
   const handleKeyDown = (e) => {
-    if (e.key === 'Enter' && !e.shiftKey) {
-      e.preventDefault();
-      handleSend();
-    }
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
   };
 
   const handleTyping = (e) => {
@@ -284,17 +294,12 @@ function ChatWindow({ conversation, onBack }) {
     typingTimeoutRef.current = setTimeout(() => stopTyping(conversation.id), 2000);
   };
 
-  // Group messages by date
   const grouped = [];
   let currentDate = '';
   messages.forEach(msg => {
     const d = new Date(msg.created_at).toLocaleDateString();
-    if (d !== currentDate) {
-      currentDate = d;
-      grouped.push({ date: d, msgs: [msg] });
-    } else {
-      grouped[grouped.length - 1].msgs.push(msg);
-    }
+    if (d !== currentDate) { currentDate = d; grouped.push({ date: d, msgs: [msg] }); }
+    else grouped[grouped.length - 1].msgs.push(msg);
   });
 
   return (
@@ -305,7 +310,12 @@ function ChatWindow({ conversation, onBack }) {
           <button onClick={onBack} className="text-white lg:hidden mr-1">
             <ArrowLeft className="w-6 h-6" />
           </button>
-          <Avatar src={conversation.other_profile_picture} username={conversation.other_username} size={10} online={isOnline} />
+          <Avatar
+            src={conversation.other_profile_picture}
+            username={conversation.other_username}
+            size={10}
+            online={isOnline === true}
+          />
           <div>
             <h2 className="text-base font-semibold text-white">{conversation.other_username}</h2>
             <p className="text-xs text-zinc-500">{isOnline ? 'Active now' : 'Offline'}</p>
@@ -403,8 +413,18 @@ function ChatWindow({ conversation, onBack }) {
 function NewMessageModal({ isOpen, onClose, onSelectUser }) {
   const [query, setQuery] = useState('');
   const [results, setResults] = useState([]);
+  const [allUsers, setAllUsers] = useState([]);
   const [searching, setSearching] = useState(false);
   const [selected, setSelected] = useState(null);
+
+  // Load all users on open
+  useEffect(() => {
+    if (!isOpen) return;
+    fetch(`${API}/users/all`, { headers: authHeaders() })
+      .then(r => r.json())
+      .then(data => setAllUsers(Array.isArray(data) ? data : []))
+      .catch(console.error);
+  }, [isOpen]);
 
   useEffect(() => {
     if (!query.trim()) { setResults([]); return; }
@@ -413,7 +433,7 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
       try {
         const res = await fetch(`${API}/users/search?q=${encodeURIComponent(query)}`, { headers: authHeaders() });
         const data = await res.json();
-        setResults(Array.isArray(data) ? data : data.users || []);
+        setResults(Array.isArray(data) ? data : []);
       } catch { setResults([]); }
       finally { setSearching(false); }
     }, 400);
@@ -424,6 +444,8 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
     if (selected) { onSelectUser(selected); onClose(); setSelected(null); setQuery(''); }
   };
 
+  const displayUsers = query ? results : allUsers;
+
   if (!isOpen) return null;
 
   return (
@@ -432,11 +454,8 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700 shrink-0">
           <button onClick={onClose} className="text-white hover:text-zinc-400"><X className="w-6 h-6" /></button>
           <h2 className="text-base font-semibold text-white">New message</h2>
-          <button
-            onClick={handleNext}
-            disabled={!selected}
-            className={`text-sm font-semibold ${selected ? 'text-blue-500 hover:text-blue-400' : 'text-zinc-600 cursor-not-allowed'}`}
-          >
+          <button onClick={handleNext} disabled={!selected}
+            className={`text-sm font-semibold ${selected ? 'text-blue-500 hover:text-blue-400' : 'text-zinc-600 cursor-not-allowed'}`}>
             Next
           </button>
         </div>
@@ -449,10 +468,7 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
               <button onClick={() => setSelected(null)}><X className="w-3 h-3" /></button>
             </span>
           )}
-          <input
-            type="text"
-            value={query}
-            onChange={e => setQuery(e.target.value)}
+          <input type="text" value={query} onChange={e => setQuery(e.target.value)}
             placeholder="Search users..."
             className="flex-1 min-w-[100px] bg-transparent text-sm text-white placeholder-zinc-500 outline-none"
           />
@@ -461,14 +477,11 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
         <div className="flex-1 overflow-y-auto">
           {searching ? (
             <div className="flex items-center justify-center py-12 text-zinc-500 text-sm">Searching...</div>
-          ) : results.length > 0 ? (
+          ) : displayUsers.length > 0 ? (
             <div className="py-2">
-              {results.map(u => (
-                <button
-                  key={u.id}
-                  onClick={() => setSelected(u)}
-                  className={`flex w-full items-center justify-between px-4 py-2 transition-colors ${selected?.id === u.id ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'}`}
-                >
+              {displayUsers.map(u => (
+                <button key={u.id} onClick={() => setSelected(u)}
+                  className={`flex w-full items-center justify-between px-4 py-2 transition-colors ${selected?.id === u.id ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'}`}>
                   <div className="flex items-center gap-3">
                     <Avatar src={u.profile_picture} username={u.username} size={10} />
                     <div className="text-left">
@@ -485,7 +498,7 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
           ) : query ? (
             <div className="px-4 py-12 text-center text-sm text-zinc-500">No user found.</div>
           ) : (
-            <div className="px-4 py-6 text-sm text-zinc-500">Type a username to search...</div>
+            <div className="px-4 py-6 text-sm text-zinc-500">Loading users...</div>
           )}
         </div>
       </div>
@@ -506,28 +519,22 @@ export default function DMs({ openUserId }) {
       const res = await fetch(`${API}/conversations`, { headers: authHeaders() });
       const data = await res.json();
       setConversations(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error(err);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { console.error(err); }
+    finally { setLoading(false); }
   }, []);
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
-  // Auto-open conversation when coming from Profile "Message" button
   useEffect(() => {
     if (!openUserId || loading || conversations.length === 0) return;
     const existing = conversations.find(c => Number(c.other_user_id) === Number(openUserId));
     if (existing) { setActive(existing); return; }
-    // Not found — fetch user info and create
     fetch(`${API}/users/${openUserId}`, { headers: authHeaders() })
       .then(r => r.json())
       .then(user => handleSelectUser(user))
       .catch(console.error);
   }, [openUserId, loading, conversations]);
 
-  // Refresh conversations when new message arrives
   useEffect(() => {
     if (!socket) return;
     socket.on('new_message', fetchConversations);
@@ -535,19 +542,14 @@ export default function DMs({ openUserId }) {
   }, [socket, fetchConversations]);
 
   const handleSelectUser = async (user) => {
-    // Check if conversation already exists
     const existing = conversations.find(c => c.other_user_id === user.id);
     if (existing) { setActive(existing); return; }
-
-    // Create new conversation
     try {
       const res = await fetch(`${API}/conversations`, {
-        method: 'POST',
-        headers: authHeaders(),
+        method: 'POST', headers: authHeaders(),
         body: JSON.stringify({ userId: user.id }),
       });
       const newConv = await res.json();
-      // Attach user info for display
       const convWithUser = {
         ...newConv,
         other_user_id: user.id,
@@ -557,14 +559,11 @@ export default function DMs({ openUserId }) {
       };
       setConversations(prev => [convWithUser, ...prev]);
       setActive(convWithUser);
-    } catch (err) {
-      console.error('Create conversation failed:', err);
-    }
+    } catch (err) { console.error('Create conversation failed:', err); }
   };
 
   return (
     <div className="flex h-screen bg-black">
-      {/* Sidebar — hidden on mobile when chat is open */}
       <div className={`w-full lg:w-96 shrink-0 ${active ? 'hidden lg:flex lg:flex-col' : 'flex flex-col'}`}>
         <ConversationList
           conversations={conversations}
@@ -575,13 +574,9 @@ export default function DMs({ openUserId }) {
         />
       </div>
 
-      {/* Chat area */}
       <div className={`flex-1 ${!active ? 'hidden lg:flex items-center justify-center' : 'flex flex-col'}`}>
         {active ? (
-          <ChatWindow
-            conversation={active}
-            onBack={() => setActive(null)}
-          />
+          <ChatWindow conversation={active} onBack={() => setActive(null)} />
         ) : (
           <div className="flex flex-col items-center justify-center text-center px-8">
             <div className="w-20 h-20 rounded-full border-2 border-white flex items-center justify-center mb-4">
@@ -589,21 +584,15 @@ export default function DMs({ openUserId }) {
             </div>
             <h2 className="text-xl font-semibold text-white">Your messages</h2>
             <p className="text-zinc-500 text-sm mt-2">Send a message to start a chat.</p>
-            <button
-              onClick={() => setShowModal(true)}
-              className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm transition-colors"
-            >
+            <button onClick={() => setShowModal(true)}
+              className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm transition-colors">
               Send message
             </button>
           </div>
         )}
       </div>
 
-      <NewMessageModal
-        isOpen={showModal}
-        onClose={() => setShowModal(false)}
-        onSelectUser={handleSelectUser}
-      />
+      <NewMessageModal isOpen={showModal} onClose={() => setShowModal(false)} onSelectUser={handleSelectUser} />
     </div>
   );
 }

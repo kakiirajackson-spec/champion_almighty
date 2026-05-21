@@ -11,7 +11,6 @@ import Notifications from './Notifications';
 import Settings from './Settings';
 import { BACKEND_URL } from '../api';
 
-// Fix for both Cloudinary and local URLs
 const imgSrc = (url) => {
   if (!url) return null;
   if (url.startsWith('http')) return url;
@@ -204,19 +203,24 @@ const Dashboard = () => {
         </div>
       </div>
 
-      {/* Messages floating bubble */}
-      <button className="messages-bubble" onClick={() => handleNavClick('dms')}
-        style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 30, background: '#18181b', border: '1px solid #27272a', borderRadius: 24, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: '#fff', fontSize: 15, fontWeight: 600, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}
-        onMouseEnter={e => e.currentTarget.style.background = '#27272a'}
-        onMouseLeave={e => e.currentTarget.style.background = '#18181b'}>
-        <MessageCircle size={20} color="#fff" />
-        Messages
-        {unreadCount > 0 && (
-          <span style={{ background: '#ef4444', borderRadius: '50%', width: 18, height: 18, fontSize: 10, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            {unreadCount > 9 ? '9+' : unreadCount}
-          </span>
-        )}
-      </button>
+      {/* Messages floating bubble — HIDDEN when on DMs page */}
+      {active !== 'dms' && (
+        <button
+          className="messages-bubble"
+          onClick={() => handleNavClick('dms')}
+          style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 30, background: '#18181b', border: '1px solid #27272a', borderRadius: 24, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: '#fff', fontSize: 15, fontWeight: 600, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}
+          onMouseEnter={e => e.currentTarget.style.background = '#27272a'}
+          onMouseLeave={e => e.currentTarget.style.background = '#18181b'}
+        >
+          <MessageCircle size={20} color="#fff" />
+          Messages
+          {unreadCount > 0 && (
+            <span style={{ background: '#ef4444', borderRadius: '50%', width: 18, height: 18, fontSize: 10, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              {unreadCount > 9 ? '9+' : unreadCount}
+            </span>
+          )}
+        </button>
+      )}
 
       <style>{`
         @media (max-width: 900px) {
