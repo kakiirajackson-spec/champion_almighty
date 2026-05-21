@@ -11,6 +11,13 @@ import Notifications from './Notifications';
 import Settings from './Settings';
 import { BACKEND_URL } from '../api';
 
+// Fix for both Cloudinary and local URLs
+const imgSrc = (url) => {
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
+  return `${BACKEND_URL}${url}`;
+};
+
 const Dashboard = () => {
   const navigate = useNavigate();
   const [user, setUser] = useState(() => JSON.parse(localStorage.getItem('user') || 'null'));
@@ -75,7 +82,6 @@ const Dashboard = () => {
     { id: 'create', icon: PlusSquare, label: 'Create', filled: false },
   ];
 
-  // Tooltip component
   const Tooltip = ({ label }) => (
     <div style={{
       position: 'absolute', left: 58, top: '50%', transform: 'translateY(-50%)',
@@ -88,60 +94,49 @@ const Dashboard = () => {
     </div>
   );
 
+  const ProfileAvatar = ({ size = 28, ring = false }) => (
+    <div style={{
+      width: size, height: size, borderRadius: '50%', overflow: 'hidden',
+      boxShadow: ring ? '0 0 0 2px #fff' : 'none', flexShrink: 0,
+    }}>
+      {profilePic
+        ? <img src={imgSrc(profilePic)} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 700, color: '#fff' }}>
+            {user?.username?.[0]?.toUpperCase()}
+          </div>
+      }
+    </div>
+  );
+
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#000', color: '#fff', overflow: 'hidden' }}>
 
-      {/* ── LEFT SIDEBAR — icons only ── */}
-      <div
-        className="sidebar-desktop"
-        style={{
-          width: 72, flexShrink: 0, borderRight: '1px solid #27272a',
-          display: 'flex', flexDirection: 'column', alignItems: 'center',
-          padding: '12px 0', position: 'fixed', top: 0, left: 0,
-          height: '100vh', zIndex: 20, background: '#000',
-        }}
-      >
-        {/* Logo — just C icon */}
+      {/* LEFT SIDEBAR */}
+      <div className="sidebar-desktop" style={{
+        width: 72, flexShrink: 0, borderRight: '1px solid #27272a',
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        padding: '12px 0', position: 'fixed', top: 0, left: 0,
+        height: '100vh', zIndex: 20, background: '#000',
+      }}>
+        {/* Logo */}
         <div style={{ marginBottom: 20, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{
-            fontSize: 26, fontWeight: 900, fontStyle: 'italic',
-            background: 'linear-gradient(to right,#ec4899,#ef4444,#eab308)',
-            WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent',
-          }}>C</span>
+          <span style={{ fontSize: 26, fontWeight: 900, fontStyle: 'italic', background: 'linear-gradient(to right,#ec4899,#ef4444,#eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>C</span>
         </div>
 
-        {/* Nav items — icons only */}
+        {/* Nav items */}
         <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: '100%' }}>
           {navItems.map(({ id, icon: Icon, label, filled, badge }) => {
             const isActive = active === id;
             const isHovered = hoveredNav === id;
             return (
               <div key={id} style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
-                <button
-                  onClick={() => handleNavClick(id)}
+                <button onClick={() => handleNavClick(id)}
                   onMouseEnter={() => setHoveredNav(id)}
                   onMouseLeave={() => setHoveredNav(null)}
-                  style={{
-                    width: 48, height: 48, borderRadius: 12,
-                    background: isActive ? '#18181b' : isHovered ? '#111' : 'none',
-                    border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background 0.15s', position: 'relative',
-                  }}
-                >
-                  <Icon
-                    size={26}
-                    fill={isActive && filled ? '#fff' : 'none'}
-                    color={isActive ? '#fff' : '#a1a1aa'}
-                    strokeWidth={isActive ? 2.5 : 2}
-                  />
+                  style={{ width: 48, height: 48, borderRadius: 12, background: isActive ? '#18181b' : isHovered ? '#111' : 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', position: 'relative' }}>
+                  <Icon size={26} fill={isActive && filled ? '#fff' : 'none'} color={isActive ? '#fff' : '#a1a1aa'} strokeWidth={isActive ? 2.5 : 2} />
                   {badge > 0 && (
-                    <span style={{
-                      position: 'absolute', top: 6, right: 6,
-                      background: '#ef4444', borderRadius: '50%',
-                      width: 14, height: 14, fontSize: 8, fontWeight: 700,
-                      color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    }}>
+                    <span style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', borderRadius: '50%', width: 14, height: 14, fontSize: 8, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                       {badge > 9 ? '9+' : badge}
                     </span>
                   )}
@@ -157,29 +152,11 @@ const Dashboard = () => {
             const isHovered = hoveredNav === 'profile';
             return (
               <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
-                <button
-                  onClick={() => handleNavClick('profile')}
+                <button onClick={() => handleNavClick('profile')}
                   onMouseEnter={() => setHoveredNav('profile')}
                   onMouseLeave={() => setHoveredNav(null)}
-                  style={{
-                    width: 48, height: 48, borderRadius: 12,
-                    background: isActive ? '#18181b' : isHovered ? '#111' : 'none',
-                    border: 'none', cursor: 'pointer',
-                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                    transition: 'background 0.15s',
-                  }}
-                >
-                  <div style={{
-                    width: 28, height: 28, borderRadius: '50%', overflow: 'hidden',
-                    boxShadow: isActive ? '0 0 0 2px #fff' : 'none', flexShrink: 0,
-                  }}>
-                    {profilePic
-                      ? <img src={`${BACKEND_URL}${profilePic}`} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                      : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff' }}>
-                          {user?.username?.[0]?.toUpperCase()}
-                        </div>
-                    }
-                  </div>
+                  style={{ width: 48, height: 48, borderRadius: 12, background: isActive ? '#18181b' : isHovered ? '#111' : 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}>
+                  <ProfileAvatar size={28} ring={isActive} />
                 </button>
                 {isHovered && <Tooltip label="Profile" />}
               </div>
@@ -188,16 +165,11 @@ const Dashboard = () => {
         </nav>
       </div>
 
-      {/* ── MAIN CONTENT ── */}
-      <div
-        className="main-content"
-        style={{ flex: 1, marginLeft: 72, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
-      >
+      {/* MAIN CONTENT */}
+      <div className="main-content" style={{ flex: 1, marginLeft: 72, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
         {/* Mobile top bar */}
         <div className="mobile-topbar" style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1px solid #27272a', flexShrink: 0, background: '#000' }}>
-          <span style={{ fontSize: 22, fontWeight: 900, fontStyle: 'italic', background: 'linear-gradient(to right,#ec4899,#ef4444,#eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>
-            ChatApp
-          </span>
+          <span style={{ fontSize: 22, fontWeight: 900, fontStyle: 'italic', background: 'linear-gradient(to right,#ec4899,#ef4444,#eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ChatApp</span>
           <button style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }} onClick={() => handleNavClick('notifications')}>
             <Bell size={24} color={active === 'notifications' ? '#fff' : '#71717a'} />
             {unreadCount > 0 && (
@@ -227,33 +199,16 @@ const Dashboard = () => {
             </button>
           ))}
           <button onClick={() => handleNavClick('profile')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-            <div style={{ width: 28, height: 28, borderRadius: '50%', overflow: 'hidden', boxShadow: active === 'profile' ? '0 0 0 2px #fff' : 'none' }}>
-              {profilePic
-                ? <img src={`${BACKEND_URL}${profilePic}`} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff' }}>
-                    {user?.username?.[0]?.toUpperCase()}
-                  </div>
-              }
-            </div>
+            <ProfileAvatar size={28} ring={active === 'profile'} />
           </button>
         </div>
       </div>
 
       {/* Messages floating bubble */}
-      <button
-        className="messages-bubble"
-        onClick={() => handleNavClick('dms')}
-        style={{
-          position: 'fixed', bottom: 24, right: 24, zIndex: 30,
-          background: '#18181b', border: '1px solid #27272a',
-          borderRadius: 24, padding: '12px 20px',
-          display: 'flex', alignItems: 'center', gap: 10,
-          cursor: 'pointer', color: '#fff', fontSize: 15, fontWeight: 600,
-          boxShadow: '0 4px 24px rgba(0,0,0,0.5)',
-        }}
+      <button className="messages-bubble" onClick={() => handleNavClick('dms')}
+        style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 30, background: '#18181b', border: '1px solid #27272a', borderRadius: 24, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: '#fff', fontSize: 15, fontWeight: 600, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}
         onMouseEnter={e => e.currentTarget.style.background = '#27272a'}
-        onMouseLeave={e => e.currentTarget.style.background = '#18181b'}
-      >
+        onMouseLeave={e => e.currentTarget.style.background = '#18181b'}>
         <MessageCircle size={20} color="#fff" />
         Messages
         {unreadCount > 0 && (
