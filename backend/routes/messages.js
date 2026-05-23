@@ -6,7 +6,9 @@ const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
 
-// Make sure uploads/messages folder exists
+// ─────────────────────────────
+// UPLOAD SETUP
+// ─────────────────────────────
 const uploadDir = path.join(__dirname, '..', 'uploads', 'messages');
 if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
 
@@ -21,25 +23,48 @@ const upload = multer({ storage });
 // ─────────────────────────────
 router.get('/:conversationId', authMiddleware, async (req, res) => {
   const { conversationId } = req.params;
+
   try {
     const [conv] = await db.query(
-      'SELECT id FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)',
+      `SELECT id FROM conversations 
+       WHERE id = ? AND (user1_id = ? OR user2_id = ?)`,
       [conversationId, req.user.id, req.user.id]
     );
-    if (conv.length === 0) return res.status(403).json({ message: 'Access denied.' });
+
+    if (conv.length === 0) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
 
     const [messages] = await db.query(
       `SELECT id, conversation_id, sender_id, content, media_url, is_read, created_at
-       FROM messages WHERE conversation_id = ? ORDER BY created_at ASC`,
+       FROM messages 
+       WHERE conversation_id = ? 
+       ORDER BY created_at ASC`,
       [conversationId]
     );
 
+    res.json(messages);
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: 'Server error.' });
+  }
+});
+
+// ─────────────────────────────
+// MARK AS READ (IMPORTANT FIX)
+// ─────────────────────────────
+router.post('/:conversationId/mark-read', authMiddleware, async (req, res) => {
+  const { conversationId } = req.params;
+
+  try {
     await db.query(
-      'UPDATE messages SET is_read = 1 WHERE conversation_id = ? AND sender_id != ?',
+      `UPDATE messages 
+       SET is_read = 1 
+       WHERE conversation_id = ? AND sender_id != ?`,
       [conversationId, req.user.id]
     );
 
-    res.json(messages);
+    res.json({ success: true });
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Server error.' });
@@ -53,17 +78,24 @@ router.post('/:conversationId', authMiddleware, async (req, res) => {
   const { conversationId } = req.params;
   const { content } = req.body;
 
-  if (!content?.trim()) return res.status(400).json({ message: 'Message cannot be empty.' });
+  if (!content?.trim()) {
+    return res.status(400).json({ message: 'Message cannot be empty.' });
+  }
 
   try {
     const [conv] = await db.query(
-      'SELECT id FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)',
+      `SELECT id FROM conversations 
+       WHERE id = ? AND (user1_id = ? OR user2_id = ?)`,
       [conversationId, req.user.id, req.user.id]
     );
-    if (conv.length === 0) return res.status(403).json({ message: 'Access denied.' });
+
+    if (conv.length === 0) {
+      return res.status(403).json({ message: 'Access denied.' });
+    }
 
     const [result] = await db.query(
-      'INSERT INTO messages (conversation_id, sender_id, content) VALUES (?, ?, ?)',
+      `INSERT INTO messages (conversation_id, sender_id, content)
+       VALUES (?, ?, ?)`,
       [conversationId, req.user.id, content.trim()]
     );
 
@@ -81,38 +113,53 @@ router.post('/:conversationId', authMiddleware, async (req, res) => {
 });
 
 // ─────────────────────────────
-// MEDIA / VOICE NOTES
+// MEDIA + VOICE NOTES
 // ─────────────────────────────
-router.post('/:conversationId/media', authMiddleware, upload.single('media'), async (req, res) => {
-  const { conversationId } = req.params;
-  try {
-    const [conv] = await db.query(
-      'SELECT id FROM conversations WHERE id = ? AND (user1_id = ? OR user2_id = ?)',
-      [conversationId, req.user.id, req.user.id]
-    );
-    if (conv.length === 0) return res.status(403).json({ message: 'Access denied.' });
-    if (!req.file) return res.status(400).json({ message: 'No file uploaded.' });
+router.post(
+  '/:conversationId/media',
+  authMiddleware,
+  upload.single('media'),
+  async (req, res) => {
+    const { conversationId } = req.params;
 
-    const mediaUrl = '/uploads/messages/' + req.file.filename;
-    const isVoice = req.file.mimetype.startsWith('audio');
-    const content = isVoice ? '🎤 Voice note' : '📎 Media';
+    try {
+      const [conv] = await db.query(
+        `SELECT id FROM conversations 
+         WHERE id = ? AND (user1_id = ? OR user2_id = ?)`,
+        [conversationId, req.user.id, req.user.id]
+      );
 
-    const [result] = await db.query(
-      'INSERT INTO messages (conversation_id, sender_id, content, media_url) VALUES (?, ?, ?, ?)',
-      [conversationId, req.user.id, content, mediaUrl]
-    );
+      if (conv.length === 0) {
+        return res.status(403).json({ message: 'Access denied.' });
+      }
 
-    const [newMessage] = await db.query(
-      `SELECT id, conversation_id, sender_id, content, media_url, is_read, created_at
-       FROM messages WHERE id = ?`,
-      [result.insertId]
-    );
+      if (!req.file) {
+        return res.status(400).json({ message: 'No file uploaded.' });
+      }
 
-    res.status(201).json(newMessage[0]);
-  } catch (err) {
-    console.error('Media upload error:', err);
-    res.status(500).json({ message: 'Server error.' });
+      const mediaUrl = '/uploads/messages/' + req.file.filename;
+
+      const isVoice = req.file.mimetype.startsWith('audio');
+      const content = isVoice ? '🎤 Voice note' : '📎 Media';
+
+      const [result] = await db.query(
+        `INSERT INTO messages (conversation_id, sender_id, content, media_url)
+         VALUES (?, ?, ?, ?)`,
+        [conversationId, req.user.id, content, mediaUrl]
+      );
+
+      const [newMessage] = await db.query(
+        `SELECT id, conversation_id, sender_id, content, media_url, is_read, created_at
+         FROM messages WHERE id = ?`,
+        [result.insertId]
+      );
+
+      res.status(201).json(newMessage[0]);
+    } catch (err) {
+      console.error('Media upload error:', err);
+      res.status(500).json({ message: 'Server error.' });
+    }
   }
-});
+);
 
 module.exports = router;
