@@ -12,9 +12,6 @@ const Chat = ({ conversation, token, currentUser }) => {
   const bottomRef = useRef(null);
   const typingTimeoutRef = useRef(null);
 
-  // ─────────────────────────────
-  // INIT
-  // ─────────────────────────────
   useEffect(() => {
     if (!conversation?.id) return;
 
@@ -49,16 +46,10 @@ const Chat = ({ conversation, token, currentUser }) => {
     };
   }, [conversation?.id]);
 
-  // ─────────────────────────────
-  // AUTO SCROLL
-  // ─────────────────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // ─────────────────────────────
-  // FETCH MESSAGES
-  // ─────────────────────────────
   const fetchMessages = async () => {
     try {
       const res = await fetch(`${API}/messages/${conversation.id}`, {
@@ -71,12 +62,8 @@ const Chat = ({ conversation, token, currentUser }) => {
     }
   };
 
-  // ─────────────────────────────
-  // SEND MESSAGE
-  // ─────────────────────────────
   const handleSend = async (e) => {
     e?.preventDefault();
-
     if (!newMessage.trim()) return;
 
     const tempMsg = newMessage;
@@ -102,15 +89,11 @@ const Chat = ({ conversation, token, currentUser }) => {
       });
 
       socket.emit('stop_typing', { conversationId: conversation.id });
-
     } catch (err) {
       console.error(err);
     }
   };
 
-  // ─────────────────────────────
-  // TYPING
-  // ─────────────────────────────
   const handleTyping = (e) => {
     setNewMessage(e.target.value);
 
@@ -126,20 +109,11 @@ const Chat = ({ conversation, token, currentUser }) => {
     }, 1000);
   };
 
-  // ─────────────────────────────
-  // TIME FORMAT
-  // ─────────────────────────────
   const formatTime = (d) =>
     new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 
-  // ─────────────────────────────
-  // READ STATUS (SIMPLE FIX)
-  // ─────────────────────────────
   const isRead = (msg) => msg.is_read === 1;
 
-  // ─────────────────────────────
-  // UI
-  // ─────────────────────────────
   return (
     <div className="flex flex-col h-full">
 
@@ -172,7 +146,7 @@ const Chat = ({ conversation, token, currentUser }) => {
               className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
             >
               <div
-                className={`max-w-xs px-3 py-2 rounded-2xl text-sm ${
+                className={`max-w-[75%] px-3 py-2 rounded-2xl text-sm ${
                   isMe
                     ? 'bg-blue-600 text-white rounded-br-sm'
                     : 'bg-zinc-800 text-white rounded-bl-sm'
@@ -182,10 +156,15 @@ const Chat = ({ conversation, token, currentUser }) => {
                 {/* TEXT */}
                 {!msg.media_url && <p>{msg.content}</p>}
 
-                {/* AUDIO (WHATSAPP STYLE) */}
+                {/* AUDIO (FIXED MOBILE SAFE UI) */}
                 {isAudio && (
-                  <div className="flex items-center gap-2 min-w-[140px]">
-                    <audio id={`a-${msg.id}`} src={`${API}${msg.media_url}`} />
+                  <div className="flex items-center gap-2 w-fit max-w-[160px] overflow-hidden">
+
+                    <audio
+                      id={`a-${msg.id}`}
+                      src={`${API}${msg.media_url}`}
+                      style={{ display: 'none' }}
+                    />
 
                     <button
                       onClick={() => {
@@ -197,13 +176,14 @@ const Chat = ({ conversation, token, currentUser }) => {
                       ▶
                     </button>
 
-                    <div className="flex gap-[2px] items-end">
-                      {Array.from({ length: 10 }).map((_, i) => (
+                    {/* SMALL WAVEFORM (SAFE) */}
+                    <div className="flex gap-[2px] items-end max-w-[60px] overflow-hidden">
+                      {Array.from({ length: 8 }).map((_, i) => (
                         <div
                           key={i}
                           className="w-[2px] bg-white/70 rounded"
                           style={{
-                            height: `${Math.random() * 12 + 4}px`
+                            height: `${Math.random() * 10 + 4}px`
                           }}
                         />
                       ))}
@@ -213,7 +193,7 @@ const Chat = ({ conversation, token, currentUser }) => {
                   </div>
                 )}
 
-                {/* TIME + READ RECEIPT */}
+                {/* TIME + READ */}
                 <div className="flex items-center justify-end gap-1 mt-1">
                   <span className="text-[10px] opacity-60">
                     {formatTime(msg.created_at)}
