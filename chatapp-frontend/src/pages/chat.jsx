@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import { io } from 'socket.io-client';
 import { API, SOCKET_URL } from '../api';
 
@@ -6,15 +6,26 @@ const socket = io(SOCKET_URL, { transports: ['websocket', 'polling'] });
 
 const Chat = ({ conversation, token, currentUser }) => {
   const [messages, setMessages] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
+  const [text, setText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
-  const [typingUser, setTypingUser] = useState('');
-  const bottomRef = useRef(null);
-  const typingTimeoutRef = useRef(null);
 
-  // ─────────────────────────────
-  // INIT
-  // ─────────────────────────────
+  const bottomRef = useRef(null);
+  const typingTimeout = useRef(null);
+
+  // ───────────────── FETCH MESSAGES ─────────────────
+  const fetchMessages = async () => {
+    try {
+      const res = await fetch(`${API}/messages/${conversation.id}`, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      const data = await res.json();
+      setMessages(Array.isArray(data) ? data : []);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  // ───────────────── INIT ─────────────────
   useEffect(() => {
     if (!conversation?.id) return;
 
@@ -28,59 +39,27 @@ const Chat = ({ conversation, token, currentUser }) => {
       }
     });
 
-    socket.on('user_typing', ({ username }) => {
-      setIsTyping(true);
-      setTypingUser(username);
-
-      clearTimeout(typingTimeoutRef.current);
-      typingTimeoutRef.current = setTimeout(() => {
-        setIsTyping(false);
-      }, 1500);
-    });
-
-    socket.on('user_stop_typing', () => {
-      setIsTyping(false);
-    });
+    socket.on('user_typing', () => setIsTyping(true));
+    socket.on('user_stop_typing', () => setIsTyping(false));
 
     return () => {
       socket.off('new_message');
       socket.off('user_typing');
       socket.off('user_stop_typing');
     };
-  }, [conversation?.id]);
+  }, [conversation.id]);
 
-  // ─────────────────────────────
-  // AUTO SCROLL
-  // ─────────────────────────────
+  // ───────────────── AUTO SCROLL ─────────────────
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
   }, [messages, isTyping]);
 
-  // ─────────────────────────────
-  // FETCH MESSAGES
-  // ─────────────────────────────
-  const fetchMessages = async () => {
-    try {
-      const res = await fetch(`${API}/messages/${conversation.id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      const data = await res.json();
-      setMessages(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.error(err);
-    }
-  };
+  // ───────────────── SEND MESSAGE ─────────────────
+  const sendMessage = async () => {
+    if (!text.trim()) return;
 
-  // ─────────────────────────────
-  // SEND MESSAGE
-  // ─────────────────────────────
-  const handleSend = async (e) => {
-    e?.preventDefault();
-
-    if (!newMessage.trim()) return;
-
-    const tempMsg = newMessage;
-    setNewMessage('');
+    const msgText = text;
+    setText('');
 
     try {
       const res = await fetch(`${API}/messages/${conversation.id}`, {
@@ -89,71 +68,63 @@ const Chat = ({ conversation, token, currentUser }) => {
           'Content-Type': 'application/json',
           Authorization: `Bearer ${token}`
         },
-        body: JSON.stringify({ content: tempMsg })
+        body: JSON.stringify({ content: msgText })
       });
 
-      const data = await res.json();
-
-      setMessages(prev => [...prev, data]);
+      const msg = await res.json();
+      setMessages(prev => [...prev, msg]);
 
       socket.emit('send_message', {
-        ...data,
+        ...msg,
         conversationId: conversation.id
       });
-
-      socket.emit('stop_typing', { conversationId: conversation.id });
 
     } catch (err) {
       console.error(err);
     }
   };
 
-  // ─────────────────────────────
-  // TYPING
-  // ─────────────────────────────
+  // ───────────────── TYPING ─────────────────
   const handleTyping = (e) => {
-    setNewMessage(e.target.value);
+    setText(e.target.value);
 
     socket.emit('typing', {
       conversationId: conversation.id,
       username: currentUser.username
     });
 
-    clearTimeout(typingTimeoutRef.current);
+    clearTimeout(typingTimeout.current);
 
-    typingTimeoutRef.current = setTimeout(() => {
-      socket.emit('stop_typing', { conversationId: conversation.id });
+    typingTimeout.current = setTimeout(() => {
+      socket.emit('stop_typing', {
+        conversationId: conversation.id
+      });
     }, 1000);
   };
 
-  // ─────────────────────────────
-  // TIME FORMAT
-  // ─────────────────────────────
-  const formatTime = (d) =>
-    new Date(d).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  // ───────────────── VOICE NOTE PLAY ─────────────────
+  const toggleAudio = (id) => {
+    const audio = document.getElementById(`audio-${id}`);
+    const btn = document.getElementById(`btn-${id}`);
 
-  // ─────────────────────────────
-  // READ STATUS (SIMPLE FIX)
-  // ─────────────────────────────
-  const isRead = (msg) => msg.is_read === 1;
+    if (!audio) return;
 
-  // ─────────────────────────────
-  // UI
-  // ─────────────────────────────
+    if (audio.paused) {
+      audio.play();
+      btn.innerText = '⏸';
+    } else {
+      audio.pause();
+      btn.innerText = '▶';
+    }
+  };
+
+  // ───────────────── UI ─────────────────
   return (
-    <div className="flex flex-col h-full">
+    <div className="flex flex-col h-full bg-black">
 
       {/* HEADER */}
-      <div className="p-4 border-b border-zinc-800 flex items-center gap-3">
-        <div className="w-10 h-10 rounded-full bg-zinc-700 flex items-center justify-center font-bold">
-          {conversation.other_username?.[0]?.toUpperCase()}
-        </div>
-        <div>
-          <p className="font-semibold text-sm">{conversation.other_username}</p>
-          <p className="text-xs text-zinc-500">
-            {conversation.other_status === 'online' ? '🟢 Online' : '⚫ Offline'}
-          </p>
-        </div>
+      <div className="p-4 border-b border-zinc-800 text-white font-semibold">
+        {conversation.other_username}
       </div>
 
       {/* MESSAGES */}
@@ -161,104 +132,81 @@ const Chat = ({ conversation, token, currentUser }) => {
 
         {messages.map(msg => {
           const isMe = msg.sender_id === currentUser.id;
-
-          const isAudio =
-            msg.media_url &&
-            msg.media_url.match(/\.(webm|mp3|wav|ogg)/i);
+          const isAudio = msg.media_url && msg.media_url.includes('.webm');
 
           return (
             <div
               key={msg.id}
               className={`flex ${isMe ? 'justify-end' : 'justify-start'}`}
             >
-              <div
-                className={`max-w-xs px-3 py-2 rounded-2xl text-sm ${
-                  isMe
-                    ? 'bg-blue-600 text-white rounded-br-sm'
-                    : 'bg-zinc-800 text-white rounded-bl-sm'
-                }`}
-              >
 
-                {/* TEXT */}
-                {!msg.media_url && <p>{msg.content}</p>}
-
-                {/* AUDIO (WHATSAPP STYLE) */}
-                {isAudio && (
-                  <div className="flex items-center gap-2 min-w-[140px]">
-                    <audio id={`a-${msg.id}`} src={`${API}${msg.media_url}`} />
-
-                    <button
-                      onClick={() => {
-                        const a = document.getElementById(`a-${msg.id}`);
-                        a.paused ? a.play() : a.pause();
-                      }}
-                      className="text-white text-xs"
-                    >
-                      ▶
-                    </button>
-
-                    <div className="flex gap-[2px] items-end">
-                      {Array.from({ length: 10 }).map((_, i) => (
-                        <div
-                          key={i}
-                          className="w-[2px] bg-white/70 rounded"
-                          style={{
-                            height: `${Math.random() * 12 + 4}px`
-                          }}
-                        />
-                      ))}
-                    </div>
-
-                    <span className="text-[10px] opacity-60">🎤</span>
-                  </div>
-                )}
-
-                {/* TIME + READ RECEIPT */}
-                <div className="flex items-center justify-end gap-1 mt-1">
-                  <span className="text-[10px] opacity-60">
-                    {formatTime(msg.created_at)}
-                  </span>
-
-                  {isMe && (
-                    <span className="text-[10px]">
-                      {isRead(msg) ? '✔✔' : '✔'}
-                    </span>
-                  )}
+              {/* TEXT */}
+              {!isAudio && (
+                <div className={`px-4 py-2 rounded-2xl text-sm max-w-xs
+                  ${isMe ? 'bg-blue-600 text-white' : 'bg-zinc-800 text-white'}
+                `}>
+                  {msg.content}
                 </div>
-              </div>
+              )}
+
+              {/* VOICE NOTE (WHATSAPP STYLE) */}
+              {isAudio && (
+                <div className={`flex items-center gap-2 px-3 py-2 rounded-full max-w-xs
+                  ${isMe ? 'bg-blue-600' : 'bg-zinc-800'}
+                `}>
+
+                  <button
+                    id={`btn-${msg.id}`}
+                    onClick={() => toggleAudio(msg.id)}
+                    className="w-8 h-8 rounded-full bg-white/20 text-white"
+                  >
+                    ▶
+                  </button>
+
+                  <audio id={`audio-${msg.id}`} src={`${API}${msg.media_url}`} />
+
+                  <div className="flex gap-[2px] items-end h-4">
+                    {Array.from({ length: 20 }).map((_, i) => (
+                      <div
+                        key={i}
+                        className="w-[2px] bg-white/70 rounded"
+                        style={{ height: 4 + (i % 7) * 2 }}
+                      />
+                    ))}
+                  </div>
+
+                  <span className="text-[10px] text-white/70">🎤</span>
+                </div>
+              )}
+
             </div>
           );
         })}
 
         {/* TYPING */}
         {isTyping && (
-          <div className="text-xs text-zinc-400">
-            {typingUser} is typing...
-          </div>
+          <div className="text-xs text-zinc-400">typing...</div>
         )}
 
         <div ref={bottomRef} />
       </div>
 
       {/* INPUT */}
-      <form
-        onSubmit={handleSend}
-        className="p-4 border-t border-zinc-800 flex gap-3"
-      >
+      <div className="p-3 border-t border-zinc-800 flex gap-2">
         <input
-          value={newMessage}
+          value={text}
           onChange={handleTyping}
+          className="flex-1 bg-zinc-900 text-white px-4 py-2 rounded-full"
           placeholder="Message..."
-          className="flex-1 bg-zinc-900 border border-zinc-800 rounded-full px-4 py-2 text-sm"
         />
 
         <button
-          disabled={!newMessage.trim()}
-          className="bg-blue-600 text-white px-5 rounded-full text-sm"
+          onClick={sendMessage}
+          className="bg-blue-600 text-white px-4 rounded-full"
         >
           Send
         </button>
-      </form>
+      </div>
     </div>
   );
 };
