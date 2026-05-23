@@ -1,10 +1,9 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import { useSocket } from '../contexts/SocketContext';
 import {
-  Edit, ChevronDown, X, Send,
+  Edit, ChevronDown, X, Search, Send,
   Smile, Image, Heart, Check, CheckCheck,
-  Phone, Video, Info, ArrowLeft, Mic, Paperclip,
-  Play, Pause
+  Phone, Video, Info, ArrowLeft, Mic, MicOff, Paperclip
 } from 'lucide-react';
 import { API, BACKEND_URL } from '../api';
 
@@ -55,23 +54,16 @@ function formatDateHeader(dateString) {
   return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
 
-function formatDur(sec) {
-  if (!sec || isNaN(sec)) return '0:00';
-  const m = Math.floor(sec / 60);
-  const s = Math.floor(sec % 60);
-  return `${m}:${s < 10 ? '0' : ''}${s}`;
-}
-
-// ── Avatar ───────────────────────────────────────────────────────
 function Avatar({ src, username, size = 10, online = false }) {
   const initials = username ? username[0].toUpperCase() : '?';
   const px = { 8: 32, 10: 40, 12: 48, 16: 64 }[size] || 40;
+  const fontSize = px * 0.35;
   return (
     <div style={{ position: 'relative', flexShrink: 0, width: px, height: px }}>
       {src ? (
         <img src={imgSrc(src)} alt={username} style={{ width: px, height: px, borderRadius: '50%', objectFit: 'cover', display: 'block' }} />
       ) : (
-        <div style={{ width: px, height: px, borderRadius: '50%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize: px * 0.35 }}>
+        <div style={{ width: px, height: px, borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, color: '#fff', fontSize }}>
           {initials}
         </div>
       )}
@@ -82,107 +74,6 @@ function Avatar({ src, username, size = 10, online = false }) {
   );
 }
 
-// ── WhatsApp-style Voice Note Player ────────────────────────────
-function VoiceNote({ src, isOwn }) {
-  const audioRef = useRef(null);
-  const [playing, setPlaying] = useState(false);
-  const [progress, setProgress] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [currentTime, setCurrentTime] = useState(0);
-
-  // Generate fake waveform bars
-  const bars = Array.from({ length: 30 }, (_, i) => {
-    const heights = [3, 5, 8, 12, 16, 10, 7, 14, 18, 9, 6, 13, 20, 15, 8, 11, 17, 6, 9, 14, 19, 7, 10, 15, 8, 12, 5, 9, 13, 4];
-    return heights[i % heights.length];
-  });
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    const onLoaded = () => setDuration(audio.duration);
-    const onTime = () => {
-      setCurrentTime(audio.currentTime);
-      setProgress(audio.currentTime / audio.duration || 0);
-    };
-    const onEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0); };
-    audio.addEventListener('loadedmetadata', onLoaded);
-    audio.addEventListener('timeupdate', onTime);
-    audio.addEventListener('ended', onEnded);
-    return () => {
-      audio.removeEventListener('loadedmetadata', onLoaded);
-      audio.removeEventListener('timeupdate', onTime);
-      audio.removeEventListener('ended', onEnded);
-    };
-  }, []);
-
-  const togglePlay = () => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (playing) { audio.pause(); setPlaying(false); }
-    else { audio.play(); setPlaying(true); }
-  };
-
-  const handleSeek = (e) => {
-    const audio = audioRef.current;
-    if (!audio || !duration) return;
-    const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const ratio = x / rect.width;
-    audio.currentTime = ratio * duration;
-    setProgress(ratio);
-  };
-
-  const activeColor = isOwn ? '#fff' : '#3b82f6';
-  const inactiveColor = isOwn ? 'rgba(255,255,255,0.35)' : 'rgba(59,130,246,0.3)';
-
-  return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', minWidth: 200, maxWidth: 280 }}>
-      <audio ref={audioRef} src={imgSrc(src)} preload="metadata" style={{ display: 'none' }} />
-
-      {/* Play/Pause button */}
-      <button onClick={togglePlay} style={{
-        width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-        background: isOwn ? 'rgba(255,255,255,0.2)' : 'rgba(59,130,246,0.2)',
-        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {playing
-          ? <Pause size={18} color={activeColor} fill={activeColor} />
-          : <Play size={18} color={activeColor} fill={activeColor} style={{ marginLeft: 2 }} />
-        }
-      </button>
-
-      {/* Waveform + progress */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {/* Waveform bars */}
-        <div
-          onClick={handleSeek}
-          style={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', height: 28 }}
-        >
-          {bars.map((h, i) => {
-            const filled = i / bars.length <= progress;
-            return (
-              <div key={i} style={{
-                width: 3, height: h, borderRadius: 2, flexShrink: 0,
-                background: filled ? activeColor : inactiveColor,
-                transition: 'background 0.1s',
-              }} />
-            );
-          })}
-        </div>
-
-        {/* Time */}
-        <span style={{ fontSize: 10, color: isOwn ? 'rgba(255,255,255,0.7)' : '#71717a' }}>
-          {playing ? formatDur(currentTime) : formatDur(duration)}
-        </span>
-      </div>
-
-      {/* Mic icon */}
-      <Mic size={14} color={isOwn ? 'rgba(255,255,255,0.5)' : '#71717a'} style={{ flexShrink: 0 }} />
-    </div>
-  );
-}
-
-// ── Typing Indicator ─────────────────────────────────────────────
 function TypingIndicator() {
   return (
     <div className="flex items-center gap-1 px-4 py-2 bg-zinc-800 rounded-2xl rounded-bl-sm w-fit">
@@ -199,18 +90,33 @@ const EMOJIS = [
   '😢','😭','😤','🤯','🥺','😴','🤗','😇','🤩','😱',
   '👍','👎','❤️','🔥','💯','🎉','✨','👏','🙌','💪',
   '😆','🤭','🫡','🥹','😅','🫠','🤪','😜','🤑','😋',
+  '🐶','🐱','🐻','🦁','🐼','🦊','🐸','🐙','🦋','🌸',
+  '🍕','🍔','🎂','🍦','🍿','☕','🍵','🥤','🍜','🍣',
+  '⚽','🏀','🎮','🎵','🎶','🎸','🎹','🎤','📱','💻',
+  '🌍','🌈','⭐','🌙','☀️','❄️','🌊','🏔️','🌺','🍀',
 ];
 
 function EmojiPicker({ onSelect, onClose }) {
   return (
-    <div className="absolute bottom-16 left-4 bg-zinc-950 border border-zinc-800 rounded-2xl p-3 z-50 w-72 shadow-2xl">
-      <div className="flex justify-between items-center mb-2 px-1">
-        <span className="text-zinc-400 text-xs font-semibold tracking-wide uppercase">Emojis</span>
-        <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300"><X className="w-4 h-4" /></button>
+    <div style={{
+      position: 'absolute', bottom: 70, left: 0,
+      background: '#18181b', border: '1px solid #27272a',
+      borderRadius: 16, padding: 12, zIndex: 100,
+      width: 280, boxShadow: '0 8px 32px rgba(0,0,0,0.6)',
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+        <span style={{ color: '#fff', fontSize: 13, fontWeight: 600 }}>Emojis</span>
+        <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a' }}>
+          <X size={16} />
+        </button>
       </div>
-      <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(8, 1fr)', gap: 4 }}>
         {EMOJIS.map(emoji => (
-          <button key={emoji} onClick={() => onSelect(emoji)} className="text-2xl p-1 rounded-lg hover:bg-zinc-800 transition-colors">
+          <button key={emoji} onClick={() => onSelect(emoji)}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, padding: 4, borderRadius: 6, transition: 'background 0.1s' }}
+            onMouseEnter={e => e.currentTarget.style.background = '#27272a'}
+            onMouseLeave={e => e.currentTarget.style.background = 'none'}
+          >
             {emoji}
           </button>
         ))}
@@ -225,7 +131,9 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
   const [filter, setFilter] = useState('all');
   const { onlineUsers } = useSocket();
 
-  const filtered = filter === 'unread' ? conversations.filter(c => c.unread_count > 0) : conversations;
+  const filtered = filter === 'unread'
+    ? conversations.filter(c => c.unread_count > 0)
+    : conversations;
 
   return (
     <div className="flex flex-col h-full border-r border-zinc-800 bg-black">
@@ -238,17 +146,20 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
           <Edit className="w-6 h-6" />
         </button>
       </div>
+
       <div className="flex gap-2 px-4 py-3 border-b border-zinc-800">
         {['all', 'unread'].map(f => (
           <button key={f} onClick={() => setFilter(f)}
-            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors ${filter === f ? 'bg-white text-black' : 'bg-zinc-800 text-white hover:bg-zinc-700'}`}>
+            className={`px-3 py-1.5 rounded-lg text-sm font-semibold transition-colors capitalize ${filter === f ? 'bg-white text-black' : 'bg-zinc-800 text-white hover:bg-zinc-700'}`}>
             {f === 'all' ? 'Primary' : 'Unread'}
           </button>
         ))}
       </div>
-      <div className="flex items-center px-4 py-3">
+
+      <div className="flex items-center justify-between px-4 py-3">
         <span className="text-base font-semibold text-white">Messages</span>
       </div>
+
       <div className="flex-1 overflow-y-auto">
         {loading ? (
           <div className="flex items-center justify-center py-12 text-zinc-500 text-sm">Loading...</div>
@@ -257,31 +168,33 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
             <p className="text-white font-semibold">No messages yet</p>
             <p className="text-zinc-500 text-sm mt-1">Start a new conversation</p>
           </div>
-        ) : filtered.map(conv => {
-          const isOnline = onlineUsers?.has?.(Number(conv.other_user_id));
-          return (
-            <button key={conv.id} onClick={() => onSelect(conv)}
-              className={`flex w-full items-center gap-3 px-4 py-3 transition-colors text-left ${activeId === conv.id ? 'bg-zinc-900' : 'hover:bg-zinc-900/50'}`}>
-              <Avatar src={conv.other_profile_picture} username={conv.other_username} size={10} online={isOnline === true} />
-              <div className="flex-1 min-w-0">
-                <div className="flex items-center justify-between">
-                  <span className={`text-sm truncate ${conv.unread_count > 0 ? 'font-bold text-white' : 'text-white'}`}>{conv.other_username}</span>
-                  {conv.last_message_time && <span className="text-xs text-zinc-500 ml-2 shrink-0">{formatTime(conv.last_message_time)}</span>}
+        ) : (
+          filtered.map(conv => {
+            const isOnline = onlineUsers?.has?.(Number(conv.other_user_id));
+            return (
+              <button key={conv.id} onClick={() => onSelect(conv)}
+                className={`flex w-full items-center gap-3 px-4 py-3 transition-colors text-left ${activeId === conv.id ? 'bg-zinc-900' : 'hover:bg-zinc-900/50'}`}>
+                <Avatar src={conv.other_profile_picture} username={conv.other_username} size={10} online={isOnline === true} />
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center justify-between">
+                    <span className={`text-sm truncate ${conv.unread_count > 0 ? 'font-bold text-white' : 'text-white'}`}>{conv.other_username}</span>
+                    {conv.last_message_time && <span className="text-xs text-zinc-500 ml-2 shrink-0">{formatTime(conv.last_message_time)}</span>}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <p className={`text-sm truncate flex-1 ${conv.unread_count > 0 ? 'text-white font-medium' : 'text-zinc-400'}`}>
+                      {conv.last_message || 'Start a conversation'}
+                    </p>
+                    {conv.unread_count > 0 && (
+                      <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white">
+                        {conv.unread_count > 99 ? '99+' : conv.unread_count}
+                      </span>
+                    )}
+                  </div>
                 </div>
-                <div className="flex items-center gap-2">
-                  <p className={`text-sm truncate flex-1 ${conv.unread_count > 0 ? 'text-white font-medium' : 'text-zinc-400'}`}>
-                    {conv.last_message || 'Start a conversation'}
-                  </p>
-                  {conv.unread_count > 0 && (
-                    <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-500 px-1.5 text-xs font-bold text-white">
-                      {conv.unread_count > 99 ? '99+' : conv.unread_count}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </button>
-          );
-        })}
+              </button>
+            );
+          })
+        )}
       </div>
     </div>
   );
@@ -297,16 +210,16 @@ function ChatWindow({ conversation, onBack }) {
   const [isTyping, setIsTyping] = useState(false);
   const [typingWho, setTypingWho] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
-  const [isRecording, setIsRecording] = useState(false);
-  const [recordDuration, setRecordDuration] = useState(0);
-
+  const [recording, setRecording] = useState(false);
+  const [recordSeconds, setRecordSeconds] = useState(0);
   const messagesEndRef = useRef(null);
   const textareaRef = useRef(null);
   const typingTimeoutRef = useRef(null);
+  const imageInputRef = useRef(null);
   const fileInputRef = useRef(null);
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
-  const durationIntervalRef = useRef(null);
+  const recordTimerRef = useRef(null);
 
   const isOnline = onlineUsers?.has?.(Number(conversation.other_user_id));
 
@@ -319,24 +232,34 @@ function ChatWindow({ conversation, onBack }) {
   }, [conversation.id]);
 
   useEffect(() => {
-    setLoading(true); setMessages([]);
+    setLoading(true);
+    setMessages([]);
     fetchMessages();
     joinConversation(conversation.id);
+    // Poll every 3s to update read receipts live
+    const pollInterval = setInterval(fetchMessages, 3000);
+    return () => clearInterval(pollInterval);
   }, [conversation.id]);
 
   useEffect(() => {
     if (!socket) return;
-    const onNewMsg = (msg) => {
+    const onNewMessage = (msg) => {
       const convId = msg.conversation_id ?? msg.conversationId;
-      if (convId === conversation.id) fetchMessages();
+      if (convId === conversation.id && msg.sender_id !== user?.id) fetchMessages();
     };
-    const onUserTyping = ({ username }) => { setIsTyping(true); setTypingWho(username); };
-    const onStopTyping = () => { setIsTyping(false); setTypingWho(''); };
-    socket.on('new_message', onNewMsg);
+    const onUserTyping = ({ username }) => {
+      setIsTyping(true);
+      setTypingWho(username);
+    };
+    const onStopTyping = () => {
+      setIsTyping(false);
+      setTypingWho('');
+    };
+    socket.on('new_message', onNewMessage);
     socket.on('user_typing', onUserTyping);
     socket.on('user_stop_typing', onStopTyping);
     return () => {
-      socket.off('new_message', onNewMsg);
+      socket.off('new_message', onNewMessage);
       socket.off('user_typing', onUserTyping);
       socket.off('user_stop_typing', onStopTyping);
     };
@@ -351,24 +274,24 @@ function ChatWindow({ conversation, onBack }) {
     }
   }, [text]);
 
-  useEffect(() => { return () => { if (durationIntervalRef.current) clearInterval(durationIntervalRef.current); }; }, []);
-
-  const handleSend = async (forcedContent = null) => {
-    const content = forcedContent !== null ? forcedContent : text.trim();
-    if (!content) return;
-    if (forcedContent === null) setText('');
+  const handleSend = async (content) => {
+    const msg = content || text.trim();
+    if (!msg) return;
+    setText('');
     try {
       const res = await fetch(`${API}/messages/${conversation.id}`, {
         method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ content }),
+        body: JSON.stringify({ content: msg }),
       });
       const newMsg = await res.json();
       setMessages(prev => [...prev, newMsg]);
-      if (socket) socket.emit('send_message', { conversationId: conversation.id, content, senderId: user.id, receiverId: conversation.other_user_id });
-    } catch (err) { console.error(err); }
+      if (socket) socket.emit('send_message', { conversationId: conversation.id, content: msg, senderId: user.id, receiverId: conversation.other_user_id });
+    } catch (err) { console.error('Send failed:', err); }
   };
 
-  const handleKeyDown = (e) => { if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); } };
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); handleSend(); }
+  };
 
   const handleTyping = (e) => {
     setText(e.target.value);
@@ -377,66 +300,91 @@ function ChatWindow({ conversation, onBack }) {
     typingTimeoutRef.current = setTimeout(() => stopTyping(conversation.id), 2000);
   };
 
-  const handleFileUpload = async (e) => {
+  // Emoji
+  const handleEmojiSelect = (emoji) => {
+    setText(prev => prev + emoji);
+    textareaRef.current?.focus();
+  };
+
+  // Send image/file
+  const handleImageSend = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     const formData = new FormData();
     formData.append('media', file);
+    formData.append('caption', '');
     try {
-      const res = await fetch(`${API}/messages/${conversation.id}/media`, {
-        method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }, body: formData,
+      // Upload to posts endpoint to get Cloudinary URL, then send as message
+      const uploadRes = await fetch(`${API}/messages/${conversation.id}/media`, {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+        body: formData,
       });
-      if (res.ok) {
-        const newMsg = await res.json();
+      if (uploadRes.ok) {
+        const data = await uploadRes.json();
+        const newMsg = data.message || data;
         setMessages(prev => [...prev, newMsg]);
-        if (socket) socket.emit('send_message', { conversationId: conversation.id, content: newMsg.content || '📎', senderId: user.id, receiverId: conversation.other_user_id });
+        if (socket) socket.emit('send_message', { conversationId: conversation.id, content: data.content || '📷 Image', senderId: user.id, receiverId: conversation.other_user_id });
+      } else {
+        // Fallback: send as text link
+        const reader = new FileReader();
+        reader.onload = () => handleSend(`📷 [Image sent]`);
+        reader.readAsDataURL(file);
       }
-    } catch (err) { console.error(err); }
-    finally { e.target.value = ''; }
+    } catch (err) {
+      console.error(err);
+      handleSend('📷 [Image sent]');
+    }
+    e.target.value = '';
   };
 
-  const startAudioRecording = async () => {
+  // Voice recording
+  const startRecording = async () => {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       const mediaRecorder = new MediaRecorder(stream);
       mediaRecorderRef.current = mediaRecorder;
       audioChunksRef.current = [];
-      mediaRecorder.ondataavailable = (e) => { if (e.data.size > 0) audioChunksRef.current.push(e.data); };
+      mediaRecorder.ondataavailable = (e) => audioChunksRef.current.push(e.data);
       mediaRecorder.onstop = async () => {
-        const audioBlob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
+        const blob = new Blob(audioChunksRef.current, { type: 'audio/webm' });
         stream.getTracks().forEach(t => t.stop());
-        if (audioChunksRef.current.length === 0) return;
+        // Send voice note as message
         const formData = new FormData();
-        formData.append('media', audioBlob, 'voicenote.webm');
+        formData.append('media', blob, 'voice.webm');
         try {
-          const res = await fetch(`${API}/messages/${conversation.id}/media`, {
-            method: 'POST', headers: { Authorization: `Bearer ${localStorage.getItem('token')}` }, body: formData,
+          const uploadRes = await fetch(`${API}/messages/${conversation.id}/media`, {
+            method: 'POST',
+            headers: { Authorization: `Bearer ${localStorage.getItem('token')}` },
+            body: formData,
           });
-          if (res.ok) {
-            const newMsg = await res.json();
-            setMessages(prev => [...prev, newMsg]);
-            if (socket) socket.emit('send_message', { conversationId: conversation.id, content: '🎤 Voice note', senderId: user.id, receiverId: conversation.other_user_id });
+          if (uploadRes.ok) {
+            const data = await uploadRes.json();
+            setMessages(prev => [...prev, data.message || data]);
+          } else {
+            handleSend('🎤 [Voice note]');
           }
-        } catch (err) { console.error(err); }
+        } catch { handleSend('🎤 [Voice note]'); }
       };
       mediaRecorder.start();
-      setIsRecording(true);
-      setRecordDuration(0);
-      durationIntervalRef.current = setInterval(() => setRecordDuration(p => p + 1), 1000);
-    } catch (err) { console.error('Mic access blocked:', err); }
+      setRecording(true);
+      setRecordSeconds(0);
+      recordTimerRef.current = setInterval(() => setRecordSeconds(s => s + 1), 1000);
+    } catch (err) {
+      console.error('Mic access denied:', err);
+      alert('Microphone access denied. Please allow mic in browser settings.');
+    }
   };
 
-  const stopAudioRecording = (shouldSend = true) => {
-    if (!mediaRecorderRef.current || mediaRecorderRef.current.state === 'inactive') return;
-    clearInterval(durationIntervalRef.current);
-    setIsRecording(false);
-    if (!shouldSend) audioChunksRef.current = [];
-    mediaRecorderRef.current.stop();
+  const stopRecording = () => {
+    if (mediaRecorderRef.current && recording) {
+      mediaRecorderRef.current.stop();
+      setRecording(false);
+      clearInterval(recordTimerRef.current);
+      setRecordSeconds(0);
+    }
   };
 
-  const fmtDur = (sec) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${s < 10 ? '0' : ''}${s}`; };
-
-  // Group messages by date
   const grouped = [];
   let currentDate = '';
   messages.forEach(msg => {
@@ -446,7 +394,7 @@ function ChatWindow({ conversation, onBack }) {
   });
 
   return (
-    <div className="flex flex-col h-full bg-black relative">
+    <div className="flex flex-col h-full bg-black" style={{ position: 'relative' }}>
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-800 shrink-0">
         <div className="flex items-center gap-3">
@@ -484,25 +432,31 @@ function ChatWindow({ conversation, onBack }) {
                 {group.msgs.map((msg, i) => {
                   const isOwn = msg.sender_id === user?.id;
                   const showTime = i === group.msgs.length - 1 || group.msgs[i + 1]?.sender_id !== msg.sender_id;
-                  const hasMedia = !!msg.media_url;
-                  const isImg = hasMedia && /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(msg.media_url);
-                  const isVid = hasMedia && /\.(mp4|webm|ogg|mov)$/i.test(msg.media_url);
-                  const isAud = hasMedia && /\.(mp3|wav|ogg|webm|m4a)$/i.test(msg.media_url);
-
+                  const isImage = msg.media_url && (msg.media_type === 'image' || msg.media_url?.match(/\.(jpg|jpeg|png|gif|webp)/i));
+                  const isAudio = msg.media_url && (msg.media_type === 'audio' || msg.media_url?.match(/\.(webm|mp3|ogg|wav)/i));
                   return (
                     <div key={msg.id} className={`flex flex-col max-w-[70%] mb-1 ${isOwn ? 'self-end items-end ml-auto' : 'self-start items-start'}`}>
-                      <div className={`rounded-2xl break-words ${isOwn ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-zinc-800 text-white rounded-bl-sm'} ${isAud ? 'px-3 py-2' : isImg || isVid ? 'p-1 overflow-hidden' : 'px-4 py-2'}`}>
-                        {isImg && <img src={imgSrc(msg.media_url)} alt="img" className="max-w-xs rounded-xl object-cover max-h-64" />}
-                        {isVid && <video src={imgSrc(msg.media_url)} controls className="max-w-xs rounded-xl max-h-64" />}
-                        {/* ── WhatsApp-style Voice Note ── */}
-                        {isAud && <VoiceNote src={msg.media_url} isOwn={isOwn} />}
-                        {hasMedia && !isImg && !isVid && !isAud && (
-                          <a href={imgSrc(msg.media_url)} target="_blank" rel="noreferrer" className="underline text-sm flex items-center gap-1 p-2">
-                            <Paperclip className="w-4 h-4 shrink-0" /> Download file
-                          </a>
-                        )}
-                        {!hasMedia && <p className="text-sm whitespace-pre-wrap">{msg.content}</p>}
-                      </div>
+                      {isImage ? (
+                        <img src={imgSrc(msg.media_url)} alt="media" style={{ maxWidth: 220, borderRadius: 12, objectFit: 'cover' }} />
+                      ) : isAudio ? (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 12px', borderRadius: 18, background: isOwn ? '#2563eb' : '#27272a', maxWidth: 220 }}>
+                          <audio src={imgSrc(msg.media_url)} style={{ display: 'none' }} id={`audio-${msg.id}`} onEnded={() => { const btn = document.getElementById(`play-${msg.id}`); if(btn) btn.textContent = '▶'; }} />
+                          <button id={`play-${msg.id}`} onClick={() => { const a = document.getElementById(`audio-${msg.id}`); const btn = document.getElementById(`play-${msg.id}`); if(a.paused){a.play();btn.textContent='⏸';}else{a.pause();btn.textContent='▶';} }}
+                            style={{ background: 'rgba(255,255,255,0.2)', border: 'none', borderRadius: '50%', width: 32, height: 32, cursor: 'pointer', color: '#fff', fontSize: 12, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                            ▶
+                          </button>
+                          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            {Array.from({length: 20}).map((_, i) => (
+                              <div key={i} style={{ width: 3, borderRadius: 3, background: 'rgba(255,255,255,0.7)', height: Math.random() * 16 + 4 }} />
+                            ))}
+                          </div>
+                          <span style={{ color: 'rgba(255,255,255,0.7)', fontSize: 11, flexShrink: 0 }}>🎤</span>
+                        </div>
+                      ) : (
+                        <div className={`px-4 py-2 rounded-2xl break-words ${isOwn ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-zinc-800 text-white rounded-bl-sm'}`}>
+                          <p className="text-sm whitespace-pre-wrap">{msg.content}</p>
+                        </div>
+                      )}
                       {showTime && (
                         <div className="flex items-center gap-1 mt-1 px-1">
                           <span className="text-xs text-zinc-500">{formatMsgTime(msg.created_at)}</span>
@@ -527,43 +481,74 @@ function ChatWindow({ conversation, onBack }) {
 
       {/* Emoji picker */}
       {showEmoji && (
-        <EmojiPicker onSelect={(emoji) => { setText(p => p + emoji); textareaRef.current?.focus(); }} onClose={() => setShowEmoji(false)} />
+        <div style={{ position: 'absolute', bottom: 80, left: 16, zIndex: 100 }}>
+          <EmojiPicker onSelect={(e) => { handleEmojiSelect(e); setShowEmoji(false); }} onClose={() => setShowEmoji(false)} />
+        </div>
       )}
 
       {/* Input */}
-      <div className="border-t border-zinc-800 p-4 shrink-0 bg-black">
-        {isRecording ? (
-          <div className="flex items-center justify-between gap-4 rounded-full border border-red-500 bg-red-950/20 px-4 py-2 text-white animate-pulse">
-            <div className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500" />
-              <span className="text-sm font-medium">Recording... {fmtDur(recordDuration)}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <button onClick={() => stopAudioRecording(false)} className="text-xs text-zinc-400 hover:text-white px-2 py-1 rounded bg-zinc-800">Cancel</button>
-              <button onClick={() => stopAudioRecording(true)} className="text-xs font-semibold text-white px-3 py-1 rounded bg-red-600 hover:bg-red-500">Send</button>
-            </div>
+      <div className="border-t border-zinc-800 p-3 shrink-0">
+        {recording ? (
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12, background: '#18181b', borderRadius: 999, padding: '10px 16px', border: '1px solid #ef4444' }}>
+            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#ef4444', animation: 'pulse 1s infinite' }} />
+            <span style={{ color: '#fff', fontSize: 14, flex: 1 }}>Recording... {recordSeconds}s</span>
+            <button onClick={stopRecording} style={{ background: '#ef4444', border: 'none', borderRadius: 999, padding: '6px 16px', color: '#fff', fontWeight: 600, cursor: 'pointer', fontSize: 13 }}>
+              Send
+            </button>
           </div>
         ) : (
-          <div className="flex items-end gap-2 rounded-2xl border border-zinc-700 bg-zinc-900 px-4 py-2">
-            <button onClick={() => setShowEmoji(!showEmoji)} className={`hover:text-zinc-400 shrink-0 mb-0.5 ${showEmoji ? 'text-blue-500' : 'text-white'}`}>
-              <Smile className="w-6 h-6" />
+          <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, background: '#18181b', borderRadius: 24, border: '1px solid #3f3f46', padding: '8px 12px' }}>
+            {/* Emoji */}
+            <button onClick={() => setShowEmoji(v => !v)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: showEmoji ? '#3b82f6' : '#71717a', flexShrink: 0, display: 'flex' }}>
+              <Smile size={22} />
             </button>
-            <textarea ref={textareaRef} value={text} onChange={handleTyping} onKeyDown={handleKeyDown}
-              placeholder="Message..." rows={1}
-              className="flex-1 bg-transparent text-sm text-white placeholder-zinc-500 outline-none resize-none min-h-[24px] max-h-[120px] py-1" />
+
+            {/* Textarea */}
+            <textarea
+              ref={textareaRef}
+              value={text}
+              onChange={handleTyping}
+              onKeyDown={handleKeyDown}
+              placeholder="Message..."
+              rows={1}
+              style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: 14, resize: 'none', minHeight: 24, maxHeight: 120, fontFamily: 'inherit' }}
+            />
+
             {text.trim() ? (
-              <button onClick={() => handleSend()} className="text-blue-500 font-semibold text-sm shrink-0 hover:text-blue-400 mb-1">Send</button>
+              <button onClick={() => handleSend()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontWeight: 700, fontSize: 14, flexShrink: 0 }}>
+                Send
+              </button>
             ) : (
-              <div className="flex items-center gap-3 shrink-0 mb-0.5">
-                <input type="file" ref={fileInputRef} onChange={handleFileUpload} className="hidden" accept="image/*,video/*,audio/*" />
-                <button onClick={() => fileInputRef.current?.click()} className="text-white hover:text-zinc-400"><Image className="w-6 h-6" /></button>
-                <button onClick={startAudioRecording} className="text-white hover:text-zinc-400"><Mic className="w-6 h-6" /></button>
-                <button onClick={() => handleSend('❤️')} className="text-white hover:text-zinc-400"><Heart className="w-6 h-6" /></button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+                {/* Image */}
+                <button onClick={() => imageInputRef.current?.click()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex' }}>
+                  <Image size={22} />
+                </button>
+                <input ref={imageInputRef} type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleImageSend} />
+
+                {/* File */}
+                <button onClick={() => fileInputRef.current?.click()} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex' }}>
+                  <Paperclip size={22} />
+                </button>
+                <input ref={fileInputRef} type="file" style={{ display: 'none' }} onChange={handleImageSend} />
+
+                {/* Voice note */}
+                <button onMouseDown={startRecording} onMouseUp={stopRecording} onTouchStart={startRecording} onTouchEnd={stopRecording}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex' }}>
+                  <Mic size={22} />
+                </button>
+
+                {/* Heart */}
+                <button onClick={() => handleSend('❤️')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', display: 'flex' }}>
+                  <Heart size={22} />
+                </button>
               </div>
             )}
           </div>
         )}
       </div>
+
+      <style>{`@keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.3} }`}</style>
     </div>
   );
 }
@@ -598,6 +583,10 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
     return () => clearTimeout(t);
   }, [query]);
 
+  const handleNext = () => {
+    if (selected) { onSelectUser(selected); onClose(); setSelected(null); setQuery(''); }
+  };
+
   const displayUsers = query ? results : allUsers;
   if (!isOpen) return null;
 
@@ -607,8 +596,10 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
         <div className="flex items-center justify-between px-4 py-3 border-b border-zinc-700 shrink-0">
           <button onClick={onClose} className="text-white hover:text-zinc-400"><X className="w-6 h-6" /></button>
           <h2 className="text-base font-semibold text-white">New message</h2>
-          <button onClick={() => { if (selected) { onSelectUser(selected); onClose(); setSelected(null); setQuery(''); } }}
-            disabled={!selected} className={`text-sm font-semibold ${selected ? 'text-blue-500' : 'text-zinc-600 cursor-not-allowed'}`}>Next</button>
+          <button onClick={handleNext} disabled={!selected}
+            className={`text-sm font-semibold ${selected ? 'text-blue-500 hover:text-blue-400' : 'text-zinc-600 cursor-not-allowed'}`}>
+            Next
+          </button>
         </div>
         <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-700 shrink-0">
           <span className="text-base font-semibold text-white">To:</span>
@@ -631,7 +622,10 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
                   className={`flex w-full items-center justify-between px-4 py-2 transition-colors ${selected?.id === u.id ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'}`}>
                   <div className="flex items-center gap-3">
                     <Avatar src={u.profile_picture} username={u.username} size={10} />
-                    <span className="text-sm font-semibold text-white">{u.username}</span>
+                    <div className="text-left">
+                      <span className="text-sm font-semibold text-white">{u.username}</span>
+                      {u.bio && <p className="text-xs text-zinc-500 truncate max-w-[200px]">{u.bio}</p>}
+                    </div>
                   </div>
                   <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selected?.id === u.id ? 'bg-blue-500 border-blue-500' : 'border-zinc-500'}`}>
                     {selected?.id === u.id && <Check className="w-4 h-4 text-white" />}
@@ -639,8 +633,10 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
                 </button>
               ))}
             </div>
+          ) : query ? (
+            <div className="px-4 py-12 text-center text-sm text-zinc-500">No user found.</div>
           ) : (
-            <div className="px-4 py-6 text-sm text-zinc-500">{query ? 'No user found.' : 'Loading users...'}</div>
+            <div className="px-4 py-6 text-sm text-zinc-500">Loading users...</div>
           )}
         </div>
       </div>
@@ -649,7 +645,7 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
 }
 
 // ── Main DMs Page ────────────────────────────────────────────────
-export default function DMs({ openUserId }) {
+export default function DMs({ openUserId, onUnreadCount }) {
   const { socket } = useSocket();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -660,10 +656,14 @@ export default function DMs({ openUserId }) {
     try {
       const res = await fetch(`${API}/conversations`, { headers: authHeaders() });
       const data = await res.json();
-      setConversations(Array.isArray(data) ? data : []);
+      const convs = Array.isArray(data) ? data : [];
+      setConversations(convs);
+      // Count conversations with unread messages (not total messages)
+      const unreadConvs = convs.filter(c => c.unread_count > 0).length;
+      if (onUnreadCount) onUnreadCount(unreadConvs);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
-  }, []);
+  }, [onUnreadCount]);
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
@@ -673,7 +673,7 @@ export default function DMs({ openUserId }) {
     if (existing) { setActive(existing); return; }
     fetch(`${API}/users/${openUserId}`, { headers: authHeaders() })
       .then(r => r.json())
-      .then(u => handleSelectUser(u))
+      .then(user => handleSelectUser(user))
       .catch(console.error);
   }, [openUserId, loading, conversations]);
 
@@ -683,18 +683,19 @@ export default function DMs({ openUserId }) {
     return () => socket.off('new_message', fetchConversations);
   }, [socket, fetchConversations]);
 
-  const handleSelectUser = async (u) => {
-    const existing = conversations.find(c => c.other_user_id === u.id);
+  const handleSelectUser = async (user) => {
+    const existing = conversations.find(c => c.other_user_id === user.id);
     if (existing) { setActive(existing); return; }
     try {
       const res = await fetch(`${API}/conversations`, {
-        method: 'POST', headers: authHeaders(), body: JSON.stringify({ userId: u.id }),
+        method: 'POST', headers: authHeaders(),
+        body: JSON.stringify({ userId: user.id }),
       });
       const newConv = await res.json();
-      const convWithUser = { ...newConv, other_user_id: u.id, other_username: u.username, other_profile_picture: u.profile_picture, other_status: u.status };
+      const convWithUser = { ...newConv, other_user_id: user.id, other_username: user.username, other_profile_picture: user.profile_picture, other_status: user.status };
       setConversations(prev => [convWithUser, ...prev]);
       setActive(convWithUser);
-    } catch (err) { console.error(err); }
+    } catch (err) { console.error('Create conversation failed:', err); }
   };
 
   return (
@@ -712,7 +713,9 @@ export default function DMs({ openUserId }) {
             </div>
             <h2 className="text-xl font-semibold text-white">Your messages</h2>
             <p className="text-zinc-500 text-sm mt-2">Send a message to start a chat.</p>
-            <button onClick={() => setShowModal(true)} className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm">Send message</button>
+            <button onClick={() => setShowModal(true)} className="mt-4 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white font-semibold rounded-lg text-sm transition-colors">
+              Send message
+            </button>
           </div>
         )}
       </div>
