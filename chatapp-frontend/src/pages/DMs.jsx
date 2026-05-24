@@ -9,20 +9,28 @@ import {
 import { API, BACKEND_URL } from '../api';
 
 function authHeaders() {
-  return {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${localStorage.getItem('token')}`,
-  };
+  return { 'Content-Type': 'application/json', Authorization: `Bearer ${localStorage.getItem('token')}` };
 }
-
 function getUser() {
   try { return JSON.parse(localStorage.getItem('user')); } catch { return null; }
 }
-
 const imgSrc = (url) => {
   if (!url) return null;
   if (url.startsWith('http')) return url;
   return `${BACKEND_URL}${url}`;
+};
+
+// ── Detect voice note FIRST before video (webm can be both) ──────
+const isVoiceNote = (url) => {
+  if (!url) return false;
+  // Voice notes we record are named voicenote.webm or have audio mime
+  return /voicenote/i.test(url) || /\.(mp3|wav|m4a|ogg|aac)$/i.test(url) ||
+    (url.includes('messages') && /\.webm$/i.test(url));
+};
+const isImageFile = (url) => /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(url || '');
+const isVideoFile = (url) => {
+  if (isVoiceNote(url)) return false; // voice note takes priority
+  return /\.(mp4|mov|avi)$/i.test(url || '');
 };
 
 function formatTime(dateString) {
@@ -39,12 +47,10 @@ function formatTime(dateString) {
   if (diffDays < 7) return `${diffDays}d`;
   return `${Math.floor(diffDays / 7)}w`;
 }
-
 function formatMsgTime(dateString) {
   if (!dateString) return '';
   return new Date(dateString).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
 }
-
 function formatDateHeader(dateString) {
   const date = new Date(dateString);
   const today = new Date();
@@ -54,8 +60,7 @@ function formatDateHeader(dateString) {
   if (date.toDateString() === yesterday.toDateString()) return 'Yesterday';
   return date.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
 }
-
-function formatDur(sec) {
+function fmtDur(sec) {
   if (!sec || isNaN(sec)) return '0:00';
   const m = Math.floor(sec / 60);
   const s = Math.floor(sec % 60);
@@ -64,8 +69,8 @@ function formatDur(sec) {
 
 // ── Avatar ───────────────────────────────────────────────────────
 function Avatar({ src, username, size = 10, online = false }) {
-  const initials = username ? username[0].toUpperCase() : '?';
   const px = { 8: 32, 10: 40, 12: 48, 16: 64 }[size] || 40;
+  const initials = username ? username[0].toUpperCase() : '?';
   return (
     <div style={{ position: 'relative', flexShrink: 0, width: px, height: px }}>
       {src ? (
@@ -82,7 +87,7 @@ function Avatar({ src, username, size = 10, online = false }) {
   );
 }
 
-// ── WhatsApp-style Voice Note Player ────────────────────────────
+// ── WhatsApp-style Voice Note ────────────────────────────────────
 function VoiceNote({ src, isOwn }) {
   const audioRef = useRef(null);
   const [playing, setPlaying] = useState(false);
@@ -90,20 +95,13 @@ function VoiceNote({ src, isOwn }) {
   const [duration, setDuration] = useState(0);
   const [currentTime, setCurrentTime] = useState(0);
 
-  // Generate fake waveform bars
-  const bars = Array.from({ length: 30 }, (_, i) => {
-    const heights = [3, 5, 8, 12, 16, 10, 7, 14, 18, 9, 6, 13, 20, 15, 8, 11, 17, 6, 9, 14, 19, 7, 10, 15, 8, 12, 5, 9, 13, 4];
-    return heights[i % heights.length];
-  });
+  const bars = [3,5,8,12,16,10,7,14,18,9,6,13,20,15,8,11,17,6,9,14,19,7,10,15,8,12,5,9,13,4];
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
     const onLoaded = () => setDuration(audio.duration);
-    const onTime = () => {
-      setCurrentTime(audio.currentTime);
-      setProgress(audio.currentTime / audio.duration || 0);
-    };
+    const onTime = () => { setCurrentTime(audio.currentTime); setProgress(audio.currentTime / audio.duration || 0); };
     const onEnded = () => { setPlaying(false); setProgress(0); setCurrentTime(0); };
     audio.addEventListener('loadedmetadata', onLoaded);
     audio.addEventListener('timeupdate', onTime);
@@ -126,58 +124,29 @@ function VoiceNote({ src, isOwn }) {
     const audio = audioRef.current;
     if (!audio || !duration) return;
     const rect = e.currentTarget.getBoundingClientRect();
-    const x = e.clientX - rect.left;
-    const ratio = x / rect.width;
-    audio.currentTime = ratio * duration;
-    setProgress(ratio);
+    audio.currentTime = ((e.clientX - rect.left) / rect.width) * duration;
   };
 
   const activeColor = isOwn ? '#fff' : '#3b82f6';
-  const inactiveColor = isOwn ? 'rgba(255,255,255,0.35)' : 'rgba(59,130,246,0.3)';
+  const inactiveColor = isOwn ? 'rgba(255,255,255,0.3)' : 'rgba(59,130,246,0.25)';
 
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '8px 4px', minWidth: 200, maxWidth: 280 }}>
+    <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '6px 2px', minWidth: 200, maxWidth: 260 }}>
       <audio ref={audioRef} src={imgSrc(src)} preload="metadata" style={{ display: 'none' }} />
-
-      {/* Play/Pause button */}
-      <button onClick={togglePlay} style={{
-        width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
-        background: isOwn ? 'rgba(255,255,255,0.2)' : 'rgba(59,130,246,0.2)',
-        border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
-      }}>
-        {playing
-          ? <Pause size={18} color={activeColor} fill={activeColor} />
-          : <Play size={18} color={activeColor} fill={activeColor} style={{ marginLeft: 2 }} />
-        }
+      <button onClick={togglePlay} style={{ width: 36, height: 36, borderRadius: '50%', flexShrink: 0, background: isOwn ? 'rgba(255,255,255,0.15)' : 'rgba(59,130,246,0.15)', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+        {playing ? <Pause size={16} color={activeColor} fill={activeColor} /> : <Play size={16} color={activeColor} fill={activeColor} style={{ marginLeft: 2 }} />}
       </button>
-
-      {/* Waveform + progress */}
-      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 4 }}>
-        {/* Waveform bars */}
-        <div
-          onClick={handleSeek}
-          style={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', height: 28 }}
-        >
-          {bars.map((h, i) => {
-            const filled = i / bars.length <= progress;
-            return (
-              <div key={i} style={{
-                width: 3, height: h, borderRadius: 2, flexShrink: 0,
-                background: filled ? activeColor : inactiveColor,
-                transition: 'background 0.1s',
-              }} />
-            );
-          })}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 3 }}>
+        <div onClick={handleSeek} style={{ display: 'flex', alignItems: 'center', gap: 2, cursor: 'pointer', height: 24 }}>
+          {bars.map((h, i) => (
+            <div key={i} style={{ width: 3, height: h, borderRadius: 2, flexShrink: 0, background: i / bars.length <= progress ? activeColor : inactiveColor, transition: 'background 0.1s' }} />
+          ))}
         </div>
-
-        {/* Time */}
-        <span style={{ fontSize: 10, color: isOwn ? 'rgba(255,255,255,0.7)' : '#71717a' }}>
-          {playing ? formatDur(currentTime) : formatDur(duration)}
+        <span style={{ fontSize: 10, color: isOwn ? 'rgba(255,255,255,0.6)' : '#71717a' }}>
+          {playing ? fmtDur(currentTime) : fmtDur(duration)}
         </span>
       </div>
-
-      {/* Mic icon */}
-      <Mic size={14} color={isOwn ? 'rgba(255,255,255,0.5)' : '#71717a'} style={{ flexShrink: 0 }} />
+      <Mic size={13} color={isOwn ? 'rgba(255,255,255,0.4)' : '#52525b'} style={{ flexShrink: 0 }} />
     </div>
   );
 }
@@ -186,20 +155,13 @@ function VoiceNote({ src, isOwn }) {
 function TypingIndicator() {
   return (
     <div className="flex items-center gap-1 px-4 py-2 bg-zinc-800 rounded-2xl rounded-bl-sm w-fit">
-      {[0, 150, 300].map(delay => (
-        <span key={delay} className="w-2 h-2 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: `${delay}ms` }} />
-      ))}
+      {[0, 150, 300].map(d => <span key={d} className="w-2 h-2 rounded-full bg-zinc-400 animate-bounce" style={{ animationDelay: `${d}ms` }} />)}
     </div>
   );
 }
 
 // ── Emoji Picker ─────────────────────────────────────────────────
-const EMOJIS = [
-  '😀','😂','🥰','😍','🤣','😊','😎','🥳','😏','🤔',
-  '😢','😭','😤','🤯','🥺','😴','🤗','😇','🤩','😱',
-  '👍','👎','❤️','🔥','💯','🎉','✨','👏','🙌','💪',
-  '😆','🤭','🫡','🥹','😅','🫠','🤪','😜','🤑','😋',
-];
+const EMOJIS = ['😀','😂','🥰','😍','🤣','😊','😎','🥳','😏','🤔','😢','😭','😤','🤯','🥺','😴','🤗','😇','🤩','😱','👍','👎','❤️','🔥','💯','🎉','✨','👏','🙌','💪','😆','🤭','🫡','🥹','😅','🫠','🤪','😜','🤑','😋'];
 
 function EmojiPicker({ onSelect, onClose }) {
   return (
@@ -209,11 +171,7 @@ function EmojiPicker({ onSelect, onClose }) {
         <button onClick={onClose} className="text-zinc-500 hover:text-zinc-300"><X className="w-4 h-4" /></button>
       </div>
       <div className="grid grid-cols-8 gap-1 max-h-48 overflow-y-auto">
-        {EMOJIS.map(emoji => (
-          <button key={emoji} onClick={() => onSelect(emoji)} className="text-2xl p-1 rounded-lg hover:bg-zinc-800 transition-colors">
-            {emoji}
-          </button>
-        ))}
+        {EMOJIS.map(e => <button key={e} onClick={() => onSelect(e)} className="text-2xl p-1 rounded-lg hover:bg-zinc-800">{e}</button>)}
       </div>
     </div>
   );
@@ -224,7 +182,6 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
   const user = getUser();
   const [filter, setFilter] = useState('all');
   const { onlineUsers } = useSocket();
-
   const filtered = filter === 'unread' ? conversations.filter(c => c.unread_count > 0) : conversations;
 
   return (
@@ -234,9 +191,7 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
           <h1 className="text-xl font-bold text-white">{user?.username}</h1>
           <ChevronDown className="w-5 h-5 text-white" />
         </div>
-        <button onClick={onNewMessage} className="text-white hover:text-zinc-400">
-          <Edit className="w-6 h-6" />
-        </button>
+        <button onClick={onNewMessage} className="text-white hover:text-zinc-400"><Edit className="w-6 h-6" /></button>
       </div>
       <div className="flex gap-2 px-4 py-3 border-b border-zinc-800">
         {['all', 'unread'].map(f => (
@@ -288,12 +243,13 @@ function ConversationList({ conversations, loading, activeId, onSelect, onNewMes
 }
 
 // ── Chat Window ──────────────────────────────────────────────────
-function ChatWindow({ conversation, onBack }) {
+function ChatWindow({ conversation, onBack, onMessagesRead }) {
   const user = getUser();
   const { socket, joinConversation, startTyping, stopTyping, onlineUsers } = useSocket();
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(true);
   const [text, setText] = useState('');
+  // FIX: typing state is LOCAL to this chat window only
   const [isTyping, setIsTyping] = useState(false);
   const [typingWho, setTypingWho] = useState('');
   const [showEmoji, setShowEmoji] = useState(false);
@@ -307,31 +263,58 @@ function ChatWindow({ conversation, onBack }) {
   const mediaRecorderRef = useRef(null);
   const audioChunksRef = useRef([]);
   const durationIntervalRef = useRef(null);
+  // Track current conversation id to scope events
+  const convIdRef = useRef(conversation.id);
 
   const isOnline = onlineUsers?.has?.(Number(conversation.other_user_id));
 
   const fetchMessages = useCallback(() => {
     fetch(`${API}/messages/${conversation.id}`, { headers: authHeaders() })
       .then(r => r.json())
-      .then(data => setMessages(Array.isArray(data) ? data : []))
+      .then(data => {
+        setMessages(Array.isArray(data) ? data : []);
+        // Notify parent that messages were read (clears unread badge)
+        if (onMessagesRead) onMessagesRead(conversation.id);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [conversation.id]);
 
   useEffect(() => {
-    setLoading(true); setMessages([]);
+    convIdRef.current = conversation.id;
+    setLoading(true);
+    setMessages([]);
+    // FIX: reset typing state when switching conversations
+    setIsTyping(false);
+    setTypingWho('');
     fetchMessages();
     joinConversation(conversation.id);
   }, [conversation.id]);
 
   useEffect(() => {
     if (!socket) return;
+
     const onNewMsg = (msg) => {
       const convId = msg.conversation_id ?? msg.conversationId;
-      if (convId === conversation.id) fetchMessages();
+      // FIX: only update if message belongs to THIS conversation
+      if (Number(convId) === Number(convIdRef.current)) {
+        fetchMessages();
+      }
     };
-    const onUserTyping = ({ username }) => { setIsTyping(true); setTypingWho(username); };
-    const onStopTyping = () => { setIsTyping(false); setTypingWho(''); };
+
+    // FIX: typing events are scoped to conversation room by socket
+    // but we add extra check using convIdRef
+    const onUserTyping = ({ username, conversationId }) => {
+      if (conversationId && Number(conversationId) !== Number(convIdRef.current)) return;
+      setIsTyping(true);
+      setTypingWho(username);
+    };
+    const onStopTyping = ({ conversationId } = {}) => {
+      if (conversationId && Number(conversationId) !== Number(convIdRef.current)) return;
+      setIsTyping(false);
+      setTypingWho('');
+    };
+
     socket.on('new_message', onNewMsg);
     socket.on('user_typing', onUserTyping);
     socket.on('user_stop_typing', onStopTyping);
@@ -340,7 +323,7 @@ function ChatWindow({ conversation, onBack }) {
       socket.off('user_typing', onUserTyping);
       socket.off('user_stop_typing', onStopTyping);
     };
-  }, [socket, conversation.id]);
+  }, [socket, fetchMessages]);
 
   useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }); }, [messages, isTyping]);
 
@@ -359,12 +342,11 @@ function ChatWindow({ conversation, onBack }) {
     if (forcedContent === null) setText('');
     try {
       const res = await fetch(`${API}/messages/${conversation.id}`, {
-        method: 'POST', headers: authHeaders(),
-        body: JSON.stringify({ content }),
+        method: 'POST', headers: authHeaders(), body: JSON.stringify({ content }),
       });
       const newMsg = await res.json();
       setMessages(prev => [...prev, newMsg]);
-      if (socket) socket.emit('send_message', { conversationId: conversation.id, content, senderId: user.id, receiverId: conversation.other_user_id });
+      if (socket) socket.emit('send_message', { conversationId: conversation.id, conversation_id: conversation.id, content, senderId: user.id, receiverId: conversation.other_user_id });
     } catch (err) { console.error(err); }
   };
 
@@ -389,7 +371,7 @@ function ChatWindow({ conversation, onBack }) {
       if (res.ok) {
         const newMsg = await res.json();
         setMessages(prev => [...prev, newMsg]);
-        if (socket) socket.emit('send_message', { conversationId: conversation.id, content: newMsg.content || '📎', senderId: user.id, receiverId: conversation.other_user_id });
+        if (socket) socket.emit('send_message', { conversationId: conversation.id, conversation_id: conversation.id, content: newMsg.content || '📎', senderId: user.id, receiverId: conversation.other_user_id });
       }
     } catch (err) { console.error(err); }
     finally { e.target.value = ''; }
@@ -415,7 +397,7 @@ function ChatWindow({ conversation, onBack }) {
           if (res.ok) {
             const newMsg = await res.json();
             setMessages(prev => [...prev, newMsg]);
-            if (socket) socket.emit('send_message', { conversationId: conversation.id, content: '🎤 Voice note', senderId: user.id, receiverId: conversation.other_user_id });
+            if (socket) socket.emit('send_message', { conversationId: conversation.id, conversation_id: conversation.id, content: '🎤 Voice note', senderId: user.id, receiverId: conversation.other_user_id });
           }
         } catch (err) { console.error(err); }
       };
@@ -423,7 +405,7 @@ function ChatWindow({ conversation, onBack }) {
       setIsRecording(true);
       setRecordDuration(0);
       durationIntervalRef.current = setInterval(() => setRecordDuration(p => p + 1), 1000);
-    } catch (err) { console.error('Mic access blocked:', err); }
+    } catch (err) { console.error('Mic blocked:', err); }
   };
 
   const stopAudioRecording = (shouldSend = true) => {
@@ -433,8 +415,6 @@ function ChatWindow({ conversation, onBack }) {
     if (!shouldSend) audioChunksRef.current = [];
     mediaRecorderRef.current.stop();
   };
-
-  const fmtDur = (sec) => { const m = Math.floor(sec / 60); const s = sec % 60; return `${m}:${s < 10 ? '0' : ''}${s}`; };
 
   // Group messages by date
   const grouped = [];
@@ -485,18 +465,18 @@ function ChatWindow({ conversation, onBack }) {
                   const isOwn = msg.sender_id === user?.id;
                   const showTime = i === group.msgs.length - 1 || group.msgs[i + 1]?.sender_id !== msg.sender_id;
                   const hasMedia = !!msg.media_url;
-                  const isImg = hasMedia && /\.(jpeg|jpg|gif|png|webp|svg)$/i.test(msg.media_url);
-                  const isVid = hasMedia && /\.(mp4|webm|ogg|mov)$/i.test(msg.media_url);
-                  const isAud = hasMedia && /\.(mp3|wav|ogg|webm|m4a)$/i.test(msg.media_url);
+                  // FIX: check voice note FIRST before video
+                  const isAud = hasMedia && isVoiceNote(msg.media_url);
+                  const isImg = hasMedia && !isAud && isImageFile(msg.media_url);
+                  const isVid = hasMedia && !isAud && isVideoFile(msg.media_url);
 
                   return (
                     <div key={msg.id} className={`flex flex-col max-w-[70%] mb-1 ${isOwn ? 'self-end items-end ml-auto' : 'self-start items-start'}`}>
                       <div className={`rounded-2xl break-words ${isOwn ? 'bg-blue-600 text-white rounded-br-sm' : 'bg-zinc-800 text-white rounded-bl-sm'} ${isAud ? 'px-3 py-2' : isImg || isVid ? 'p-1 overflow-hidden' : 'px-4 py-2'}`}>
+                        {isAud && <VoiceNote src={msg.media_url} isOwn={isOwn} />}
                         {isImg && <img src={imgSrc(msg.media_url)} alt="img" className="max-w-xs rounded-xl object-cover max-h-64" />}
                         {isVid && <video src={imgSrc(msg.media_url)} controls className="max-w-xs rounded-xl max-h-64" />}
-                        {/* ── WhatsApp-style Voice Note ── */}
-                        {isAud && <VoiceNote src={msg.media_url} isOwn={isOwn} />}
-                        {hasMedia && !isImg && !isVid && !isAud && (
+                        {hasMedia && !isAud && !isImg && !isVid && (
                           <a href={imgSrc(msg.media_url)} target="_blank" rel="noreferrer" className="underline text-sm flex items-center gap-1 p-2">
                             <Paperclip className="w-4 h-4 shrink-0" /> Download file
                           </a>
@@ -525,10 +505,7 @@ function ChatWindow({ conversation, onBack }) {
         )}
       </div>
 
-      {/* Emoji picker */}
-      {showEmoji && (
-        <EmojiPicker onSelect={(emoji) => { setText(p => p + emoji); textareaRef.current?.focus(); }} onClose={() => setShowEmoji(false)} />
-      )}
+      {showEmoji && <EmojiPicker onSelect={(e) => { setText(p => p + e); textareaRef.current?.focus(); }} onClose={() => setShowEmoji(false)} />}
 
       {/* Input */}
       <div className="border-t border-zinc-800 p-4 shrink-0 bg-black">
@@ -579,9 +556,7 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
   useEffect(() => {
     if (!isOpen) return;
     fetch(`${API}/users/all`, { headers: authHeaders() })
-      .then(r => r.json())
-      .then(data => setAllUsers(Array.isArray(data) ? data : []))
-      .catch(console.error);
+      .then(r => r.json()).then(data => setAllUsers(Array.isArray(data) ? data : [])).catch(console.error);
   }, [isOpen]);
 
   useEffect(() => {
@@ -590,8 +565,7 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
     const t = setTimeout(async () => {
       try {
         const res = await fetch(`${API}/users/search?q=${encodeURIComponent(query)}`, { headers: authHeaders() });
-        const data = await res.json();
-        setResults(Array.isArray(data) ? data : []);
+        setResults(Array.isArray(await res.json()) ? await res.json() : []);
       } catch { setResults([]); }
       finally { setSearching(false); }
     }, 400);
@@ -612,36 +586,28 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
         </div>
         <div className="flex items-center gap-2 px-4 py-3 border-b border-zinc-700 shrink-0">
           <span className="text-base font-semibold text-white">To:</span>
-          {selected && (
-            <span className="flex items-center gap-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg text-sm">
-              {selected.username}
-              <button onClick={() => setSelected(null)}><X className="w-3 h-3" /></button>
-            </span>
-          )}
+          {selected && <span className="flex items-center gap-1 bg-blue-500/20 text-blue-400 px-2 py-1 rounded-lg text-sm">{selected.username}<button onClick={() => setSelected(null)}><X className="w-3 h-3" /></button></span>}
           <input type="text" value={query} onChange={e => setQuery(e.target.value)} placeholder="Search users..."
             className="flex-1 min-w-[100px] bg-transparent text-sm text-white placeholder-zinc-500 outline-none" />
         </div>
         <div className="flex-1 overflow-y-auto">
-          {searching ? (
-            <div className="flex items-center justify-center py-12 text-zinc-500 text-sm">Searching...</div>
-          ) : displayUsers.length > 0 ? (
-            <div className="py-2">
-              {displayUsers.map(u => (
-                <button key={u.id} onClick={() => setSelected(u)}
-                  className={`flex w-full items-center justify-between px-4 py-2 transition-colors ${selected?.id === u.id ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'}`}>
-                  <div className="flex items-center gap-3">
-                    <Avatar src={u.profile_picture} username={u.username} size={10} />
-                    <span className="text-sm font-semibold text-white">{u.username}</span>
-                  </div>
-                  <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selected?.id === u.id ? 'bg-blue-500 border-blue-500' : 'border-zinc-500'}`}>
-                    {selected?.id === u.id && <Check className="w-4 h-4 text-white" />}
-                  </div>
-                </button>
-              ))}
-            </div>
-          ) : (
-            <div className="px-4 py-6 text-sm text-zinc-500">{query ? 'No user found.' : 'Loading users...'}</div>
-          )}
+          {searching ? <div className="flex items-center justify-center py-12 text-zinc-500 text-sm">Searching...</div>
+            : displayUsers.length > 0 ? (
+              <div className="py-2">
+                {displayUsers.map(u => (
+                  <button key={u.id} onClick={() => setSelected(u)}
+                    className={`flex w-full items-center justify-between px-4 py-2 transition-colors ${selected?.id === u.id ? 'bg-zinc-800' : 'hover:bg-zinc-800/50'}`}>
+                    <div className="flex items-center gap-3">
+                      <Avatar src={u.profile_picture} username={u.username} size={10} />
+                      <span className="text-sm font-semibold text-white">{u.username}</span>
+                    </div>
+                    <div className={`w-6 h-6 rounded-full border-2 flex items-center justify-center ${selected?.id === u.id ? 'bg-blue-500 border-blue-500' : 'border-zinc-500'}`}>
+                      {selected?.id === u.id && <Check className="w-4 h-4 text-white" />}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            ) : <div className="px-4 py-6 text-sm text-zinc-500">{query ? 'No user found.' : 'Loading users...'}</div>}
         </div>
       </div>
     </div>
@@ -649,7 +615,7 @@ function NewMessageModal({ isOpen, onClose, onSelectUser }) {
 }
 
 // ── Main DMs Page ────────────────────────────────────────────────
-export default function DMs({ openUserId }) {
+export default function DMs({ openUserId, onUnreadCountChange }) {
   const { socket } = useSocket();
   const [conversations, setConversations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -660,10 +626,14 @@ export default function DMs({ openUserId }) {
     try {
       const res = await fetch(`${API}/conversations`, { headers: authHeaders() });
       const data = await res.json();
-      setConversations(Array.isArray(data) ? data : []);
+      const convs = Array.isArray(data) ? data : [];
+      setConversations(convs);
+      // Update unread count for Dashboard badge
+      const total = convs.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+      if (onUnreadCountChange) onUnreadCountChange(total);
     } catch (err) { console.error(err); }
     finally { setLoading(false); }
-  }, []);
+  }, [onUnreadCountChange]);
 
   useEffect(() => { fetchConversations(); }, [fetchConversations]);
 
@@ -672,9 +642,7 @@ export default function DMs({ openUserId }) {
     const existing = conversations.find(c => Number(c.other_user_id) === Number(openUserId));
     if (existing) { setActive(existing); return; }
     fetch(`${API}/users/${openUserId}`, { headers: authHeaders() })
-      .then(r => r.json())
-      .then(u => handleSelectUser(u))
-      .catch(console.error);
+      .then(r => r.json()).then(u => handleSelectUser(u)).catch(console.error);
   }, [openUserId, loading, conversations]);
 
   useEffect(() => {
@@ -682,6 +650,16 @@ export default function DMs({ openUserId }) {
     socket.on('new_message', fetchConversations);
     return () => socket.off('new_message', fetchConversations);
   }, [socket, fetchConversations]);
+
+  // FIX: when messages are read, clear unread count for that conversation
+  const handleMessagesRead = useCallback((convId) => {
+    setConversations(prev => {
+      const updated = prev.map(c => Number(c.id) === Number(convId) ? { ...c, unread_count: 0 } : c);
+      const total = updated.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+      if (onUnreadCountChange) onUnreadCountChange(total);
+      return updated;
+    });
+  }, [onUnreadCountChange]);
 
   const handleSelectUser = async (u) => {
     const existing = conversations.find(c => c.other_user_id === u.id);
@@ -704,7 +682,7 @@ export default function DMs({ openUserId }) {
       </div>
       <div className={`flex-1 ${!active ? 'hidden lg:flex items-center justify-center' : 'flex flex-col'}`}>
         {active ? (
-          <ChatWindow conversation={active} onBack={() => setActive(null)} />
+          <ChatWindow conversation={active} onBack={() => setActive(null)} onMessagesRead={handleMessagesRead} />
         ) : (
           <div className="flex flex-col items-center justify-center text-center px-8">
             <div className="w-20 h-20 rounded-full border-2 border-white flex items-center justify-center mb-4">
