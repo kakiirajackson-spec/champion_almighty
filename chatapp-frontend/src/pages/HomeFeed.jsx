@@ -4,6 +4,7 @@ import {
   TrendingUp, Radio, Smile, Mic, Video, Image as ImageIcon, Search, Bell
 } from 'lucide-react';
 import { API, BACKEND_URL } from '../api';
+import PostCard from "../components/feed/PostCard";
 
 const imgSrc = (url) => {
   if (!url) return null;
@@ -467,123 +468,22 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
           </div>
         )}
 
-        {/* ── POSTS ── */}
-        {posts.map(post => (
-          <article key={post.id} className="cv-card" style={{ margin: '0 14px 16px', overflow: 'hidden' }}>
-            {/* Post header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
-              <button onClick={() => onViewProfile && onViewProfile(post.user_id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <Avatar src={post.profile_picture} name={post.username} size={40} ring="story" />
-                <div style={{ textAlign: 'left' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <p style={{ margin: 0, color: '#fff', fontSize: 14, fontWeight: 700 }}>{post.username}</p>
-                    {post.is_verified && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#c800ff">
-                        <path d="M12 2l2.39 3.42L18.5 4l-.41 4.13L22 10l-2.39 3.42L21 17.5l-4.13.41L15.42 22 12 19.61 8.58 22l-1.45-4.09L3 17.5l1.91-4.08L2.5 10l3.91-1.87L6 4l4.13 1.42L12 2zm-1.5 13.5l5-5-1.06-1.06-3.94 3.94-1.94-1.94L7.5 12.5l3 3z"/>
-                      </svg>
-                    )}
-                  </div>
-                  <p style={{ margin: 0, color: '#666', fontSize: 11 }}>
-                    {formatTime(post.created_at)} · {post.location || 'Kigali, Rwanda'}
-                  </p>
-                </div>
-              </button>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
-                <MoreHorizontal size={18} />
-              </button>
-            </div>
-
-            {/* Caption */}
-            {post.caption && (
-              <div style={{ padding: '0 16px 12px', color: '#e5e5e5', fontSize: 14, lineHeight: 1.5 }}>
-                {post.caption.split(' ').map((word, i) =>
-                  word.startsWith('#')
-                    ? <span key={i} className="cv-hashtag">{word} </span>
-                    : word + ' '
-                )}
-              </div>
-            )}
-
-            {/* Media */}
-            {post.media_url && (
-              <div style={{ position: 'relative', background: '#000' }}>
-                {post.media_type === 'video'
-                  ? <video src={imgSrc(post.media_url)} controls style={{ width: '100%', display: 'block', maxHeight: 600, objectFit: 'cover' }} />
-                  : <img src={imgSrc(post.media_url)} alt="" style={{ width: '100%', display: 'block', maxHeight: 600, objectFit: 'cover' }} />
-                }
-                {post.images_count > 1 && (
-                  <div style={{
-                    position: 'absolute', top: 12, right: 12,
-                    background: 'rgba(0,0,0,0.6)', color: '#fff',
-                    fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 12
-                  }}>
-                    1/{post.images_count}
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* Actions */}
-            <div style={{ padding: '12px 16px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
-                  <button className="cv-post-action" onClick={() => handleLike(post.id, post.is_liked)}>
-                    <Heart size={20} fill={post.is_liked ? '#ff007a' : 'none'} color={post.is_liked ? '#ff007a' : '#aaa'} />
-                    <span style={{ color: post.is_liked ? '#ff007a' : '#aaa' }}>
-                      {Number(post.likes_count || 0).toLocaleString()}
-                    </span>
-                  </button>
-                  <button className="cv-post-action" onClick={() => {
-                    setShowComments(p => ({ ...p, [post.id]: !p[post.id] }));
-                    fetchComments(post.id);
-                  }}>
-                    <MessageCircle size={20} />
-                    <span>{post.comments_count || 0}</span>
-                  </button>
-                  <button className="cv-post-action">
-                    <Send size={20} color="#c800ff" />
-                    <span>{post.shares_count || 0}</span>
-                  </button>
-                </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <button className="cv-post-action"><Smile size={20} color="#ff9500" /></button>
-                  <button className="cv-post-action"><Bookmark size={20} /></button>
-                </div>
-              </div>
-
-              {/* Comments */}
-              {showComments[post.id] && (
-                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #1e1e1e' }}>
-                  {(comments[post.id] || []).map(c => (
-                    <div key={c.id} style={{ fontSize: 13, color: '#ccc', marginBottom: 6 }}>
-                      <span style={{ color: '#fff', fontWeight: 700, marginRight: 6 }}>{c.username}</span>
-                      {c.content}
-                    </div>
-                  ))}
-                </div>
-              )}
-
-              {/* Comment input */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, paddingTop: 10, borderTop: '1px solid #1e1e1e' }}>
-                <Avatar src={currentUser?.profile_picture} name={currentUser?.username} size={26} />
-                <input
-                  placeholder="Add a comment..."
-                  className="cv-comment-input"
-                  value={commentText[post.id] || ''}
-                  onChange={(e) => setCommentText(p => ({ ...p, [post.id]: e.target.value }))}
-                  onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
-                />
-                {commentText[post.id] && (
-                  <button onClick={() => handleComment(post.id)} className="hf-syne" style={{
-                    background: 'none', border: 'none', cursor: 'pointer',
-                    color: '#ff4d00', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em'
-                  }}>POST</button>
-                )}
-              </div>
-            </div>
-          </article>
-        ))}
+       <PostCard
+  key={post.id}
+  post={post}
+  currentUser={currentUser}
+  comments={comments}
+  commentText={commentText}
+  showComments={showComments}
+  onViewProfile={onViewProfile}
+  handleLike={handleLike}
+  handleComment={handleComment}
+  fetchComments={fetchComments}
+  setCommentText={setCommentText}
+  setShowComments={setShowComments}
+  formatTime={formatTime}
+  imgSrc={imgSrc}
+/>
 
         {/* ── TRENDING NOW ── */}
         {posts.length > 0 && (
