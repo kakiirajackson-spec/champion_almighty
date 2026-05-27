@@ -179,17 +179,10 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
         .stories-scroll::-webkit-scrollbar { display: none; }
         .stories-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
-      .cv-card {
-  background: rgba(18,18,18,0.7);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.06);
-  border-radius: 24px;
-  box-shadow:
-    0 0 40px rgba(200,0,255,0.08),
-    0 0 80px rgba(255,77,0,0.04);
-  transition: all 0.3s ease;
-}
+        .cv-card {
+          background: #111; border: 1px solid #1e1e1e; border-radius: 18px;
+          transition: border-color 0.2s;
+        }
         .cv-card:hover { border-color: #2a2a2a; }
 
         .cv-composer-input {
@@ -474,25 +467,23 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
             <p style={{ margin: '4px 0 0', fontSize: 12 }}>Be the first to post!</p>
           </div>
         )}
-{posts.map((post) => (
-  <PostCard
-    key={post.id}
-    post={post}
-    currentUser={currentUser}
-    comments={comments}
-    commentText={commentText}
-    showComments={showComments}
-    onViewProfile={onViewProfile}
-    handleLike={handleLike}
-    handleComment={handleComment}
-    fetchComments={fetchComments}
-    setCommentText={setCommentText}
-    setShowComments={setShowComments}
-    formatTime={formatTime}
-    imgSrc={imgSrc}
-  />
-))}
 
+       <PostCard
+  key={post.id}
+  post={post}
+  currentUser={currentUser}
+  comments={comments}
+  commentText={commentText}
+  showComments={showComments}
+  onViewProfile={onViewProfile}
+  handleLike={handleLike}
+  handleComment={handleComment}
+  fetchComments={fetchComments}
+  setCommentText={setCommentText}
+  setShowComments={setShowComments}
+  formatTime={formatTime}
+  imgSrc={imgSrc}
+/>
 
         {/* ── TRENDING NOW ── */}
         {posts.length > 0 && (
