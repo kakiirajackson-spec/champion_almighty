@@ -1,5 +1,8 @@
-import React, { useState, useEffect } from 'react';
-import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Plus, X, TrendingUp, Radio, Smile, Mic, Video, Image } from 'lucide-react';
+import React, { useState, useEffect, useRef } from 'react';
+import {
+  Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Plus, X,
+  TrendingUp, Radio, Smile, Mic, Video, Image as ImageIcon, Search, Bell
+} from 'lucide-react';
 import { API, BACKEND_URL } from '../api';
 
 const imgSrc = (url) => {
@@ -19,6 +22,7 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
   const [storyView, setStoryView] = useState(null);
   const [suggested, setSuggested] = useState([]);
   const [followingIds, setFollowingIds] = useState([]);
+  const storyInputRef = useRef(null);
 
   useEffect(() => { fetchFeed(); fetchStories(); fetchSuggested(); }, []);
 
@@ -124,346 +128,375 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
 
   const currentStory = storyView ? storyView.group.stories[storyView.index] : null;
 
-  const Avatar = ({ src, name, size = 36, liveRing = false, storyRing = false }) => (
-    <div style={{
-      width: size, height: size, borderRadius: '50%', flexShrink: 0,
-      padding: liveRing || storyRing ? 2 : 0,
-      background: liveRing
-        ? 'linear-gradient(135deg, #ff4d00, #c800ff)'
-        : storyRing
-          ? 'linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888)'
-          : 'transparent',
-      boxSizing: 'border-box',
-    }}>
+  // ── Avatar with optional gradient story / live ring ──
+  const Avatar = ({ src, name, size = 36, ring = 'none' }) => {
+    const ringStyle =
+      ring === 'story'
+        ? { background: 'linear-gradient(135deg,#ff4d00,#ff007a,#c800ff)' }
+        : ring === 'live'
+        ? { background: 'linear-gradient(135deg,#c800ff,#3b82f6)' }
+        : { background: '#2a2a2a' };
+    return (
       <div style={{
-        width: '100%', height: '100%', borderRadius: '50%',
-        padding: liveRing || storyRing ? 2 : 0,
-        background: liveRing || storyRing ? '#0a0a0a' : 'transparent',
-        boxSizing: 'border-box',
+        width: size + 6, height: size + 6, borderRadius: '50%',
+        padding: 2, ...ringStyle, display: 'inline-flex',
+        alignItems: 'center', justifyContent: 'center', flexShrink: 0
       }}>
         <div style={{
-          width: '100%', height: '100%', borderRadius: '50%',
-          overflow: 'hidden', background: 'linear-gradient(135deg, #ff4d00, #c800ff)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: size * 0.38, color: '#fff',
+          width: size, height: size, borderRadius: '50%',
+          background: '#0a0a0a', padding: 2,
+          display: 'flex', alignItems: 'center', justifyContent: 'center'
         }}>
-          {src
-            ? <img src={imgSrc(src)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-            : name?.[0]?.toUpperCase()
-          }
+          <div style={{
+            width: '100%', height: '100%', borderRadius: '50%',
+            background: '#1a1a1a', overflow: 'hidden',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            color: '#888', fontWeight: 700, fontSize: size * 0.4
+          }}>
+            {src
+              ? <img src={imgSrc(src)} alt={name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : (name?.[0]?.toUpperCase() || '?')
+            }
+          </div>
         </div>
       </div>
-    </div>
-  );
+    );
+  };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', background: '#0a0a0a', minHeight: '100%' }}>
+    <div className="hf-root" style={{
+      display: 'flex', gap: 0,
+      background: '#0a0a0a', color: '#fff', minHeight: '100vh',
+      maxWidth: 1400, margin: '0 auto'
+    }}>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:ital,wght@0,300;0,400;0,500;0,600;1,400&display=swap');
 
         .hf-root { font-family: 'DM Sans', sans-serif; }
+        .hf-syne { font-family: 'Syne', sans-serif; letter-spacing: 0.02em; }
 
-        /* Stories scrollbar hidden */
         .stories-scroll::-webkit-scrollbar { display: none; }
         .stories-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
-        /* Composer */
-        .cv-composer {
-          background: #111;
-          border: 1px solid #1e1e1e;
-          border-radius: 16px;
-          margin: 12px 14px;
-          padding: 14px 16px;
+        .cv-card {
+          background: #111; border: 1px solid #1e1e1e; border-radius: 18px;
+          transition: border-color 0.2s;
         }
+        .cv-card:hover { border-color: #2a2a2a; }
+
         .cv-composer-input {
           background: transparent; border: none; outline: none;
-          color: #888; font-size: 14px; font-family: 'DM Sans', sans-serif;
-          width: 100%; caret-color: #ff4d00;
+          color: #ccc; font-size: 14px; width: 100%; caret-color: #ff4d00;
         }
-        .cv-composer-input::placeholder { color: #444; }
-        .cv-composer-actions {
-          display: flex; gap: 0; margin-top: 12px;
-          border-top: 1px solid #1e1e1e; padding-top: 12px;
-        }
+        .cv-composer-input::placeholder { color: #555; }
+
         .cv-composer-btn {
           flex: 1; display: flex; align-items: center; justify-content: center; gap: 6px;
           background: none; border: none; cursor: pointer;
-          color: #555; font-size: 12px; font-family: 'DM Sans', sans-serif;
-          font-weight: 600; padding: 4px 0;
+          color: #888; font-size: 13px; font-weight: 600; padding: 6px 0;
           transition: color 0.15s;
-          letter-spacing: 0.02em;
         }
-        .cv-composer-btn:hover { color: #aaa; }
+        .cv-composer-btn:hover { color: #fff; }
 
-        /* Pulse widget */
-        .cv-pulse {
-          margin: 4px 14px 12px;
-          background: #111;
-          border: 1px solid #1e1e1e;
-          border-radius: 16px;
-          padding: 16px;
-          display: grid;
-          grid-template-columns: 1fr auto 1fr;
-          gap: 12px;
-          align-items: center;
-        }
-
-        /* Post card */
-        .cv-post {
-          margin: 0 14px 16px;
-          background: #111;
-          border: 1px solid #1e1e1e;
-          border-radius: 18px;
-          overflow: hidden;
-          transition: border-color 0.2s;
-        }
-        .cv-post:hover { border-color: #2a2a2a; }
-
-        /* Post actions */
         .cv-post-action {
           background: none; border: none; cursor: pointer;
           display: flex; align-items: center; gap: 6px;
-          color: #888; font-size: 13px; font-family: 'DM Sans', sans-serif;
-          font-weight: 500; padding: 0; transition: color 0.15s;
+          color: #aaa; font-size: 13px; font-weight: 600; padding: 0;
+          transition: color 0.15s, transform 0.1s;
         }
         .cv-post-action:hover { color: #fff; }
+        .cv-post-action:active { transform: scale(0.95); }
 
-        /* Trending */
-        .cv-trending-card {
-          background: #111; border: 1px solid #1e1e1e;
-          border-radius: 14px; padding: 12px 14px;
-          display: flex; align-items: center; justify-content: space-between;
-          flex: 1; min-width: 0;
-          transition: border-color 0.15s, background 0.15s;
-          cursor: pointer;
-        }
-        .cv-trending-card:hover { border-color: #2a2a2a; background: #161616; }
-
-        /* Comment input */
         .cv-comment-input {
           background: transparent; border: none; outline: none;
-          color: #ccc; font-size: 13px; font-family: 'DM Sans', sans-serif;
-          flex: 1; caret-color: #ff4d00;
+          color: #ccc; font-size: 13px; flex: 1; caret-color: #ff4d00;
         }
         .cv-comment-input::placeholder { color: #3a3a3a; }
 
-        /* Follow button */
         .cv-follow-btn {
           background: none; border: 1px solid #2a2a2a;
           border-radius: 8px; padding: 5px 14px;
           color: #ff4d00; font-size: 12px; font-weight: 700;
-          font-family: 'DM Sans', sans-serif;
-          cursor: pointer; transition: background 0.15s, border-color 0.15s;
+          cursor: pointer; transition: all 0.15s;
           letter-spacing: 0.03em;
         }
         .cv-follow-btn:hover { background: rgba(255,77,0,0.1); border-color: #ff4d00; }
 
-        /* Hashtag */
         .cv-hashtag { color: #c800ff; font-weight: 600; }
 
-        /* Live badge */
         .cv-live-badge {
-          position: absolute; bottom: 2px; left: 50%; transform: translateX(-50%);
+          position: absolute; bottom: -4px; left: 50%; transform: translateX(-50%);
           background: linear-gradient(90deg, #ff4d00, #c800ff);
-          border-radius: 4px; padding: 1px 6px;
+          border-radius: 4px; padding: 2px 7px;
           font-size: 9px; font-weight: 800; color: #fff;
           font-family: 'Syne', sans-serif; letter-spacing: 0.08em;
           white-space: nowrap;
         }
 
-        @media (max-width: 900px) {
-          .hf-right { display: none !important; }
+        .cv-trending-card {
+          background: #111; border: 1px solid #1e1e1e;
+          border-radius: 14px; padding: 12px 14px;
+          display: flex; align-items: center; justify-content: space-between;
+          flex: 1; min-width: 0; cursor: pointer;
+          transition: all 0.15s;
+        }
+        .cv-trending-card:hover { border-color: #2a2a2a; background: #161616; }
+
+        .cv-section-title {
+          display: flex; align-items: center; gap: 8px;
+          font-family: 'Syne', sans-serif; font-weight: 800;
+          font-size: 14px; letter-spacing: 0.05em; text-transform: uppercase;
         }
 
-        ::-webkit-scrollbar { width: 3px; }
+        .cv-see-all {
+          background: none; border: none; cursor: pointer;
+          color: #c800ff; font-size: 12px; font-weight: 700;
+          font-family: 'Syne', sans-serif; letter-spacing: 0.05em;
+        }
+
+        @media (max-width: 1024px) { .hf-right { display: none !important; } }
+
+        ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #222; border-radius: 4px; }
       `}</style>
 
       {/* ── STORY VIEWER ── */}
       {storyView && currentStory && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: 'rgba(0,0,0,0.95)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div style={{ position: 'relative', width: '100%', maxWidth: 400, height: '100vh' }}>
+        <div style={{
+          position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.95)',
+          zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center'
+        }}>
+          <div style={{ position: 'relative', width: '100%', maxWidth: 420, height: '100vh', maxHeight: 800 }}>
+            {/* progress bars */}
             <div style={{ position: 'absolute', top: 12, left: 12, right: 12, display: 'flex', gap: 4, zIndex: 10 }}>
               {storyView.group.stories.map((_, i) => (
-                <div key={i} style={{ flex: 1, height: 2.5, borderRadius: 99, background: i <= storyView.index ? '#ff4d00' : 'rgba(255,255,255,0.2)' }} />
+                <div key={i} style={{
+                  flex: 1, height: 3, borderRadius: 2,
+                  background: i <= storyView.index ? '#fff' : 'rgba(255,255,255,0.3)'
+                }} />
               ))}
             </div>
-            <div style={{ position: 'absolute', top: 28, left: 16, right: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <Avatar src={storyView.group.profile_picture} name={storyView.group.username} size={38} liveRing />
-                <span style={{ fontSize: 14, fontWeight: 700, color: '#fff', fontFamily: "'DM Sans', sans-serif" }}>{storyView.group.username}</span>
+            <div style={{ position: 'absolute', top: 28, left: 12, right: 12, display: 'flex', justifyContent: 'space-between', alignItems: 'center', zIndex: 10 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <Avatar src={storyView.group.profile_picture} name={storyView.group.username} size={32} ring="story" />
+                <span style={{ color: '#fff', fontSize: 14, fontWeight: 600 }}>{storyView.group.username}</span>
               </div>
-              <button onClick={() => setStoryView(null)} style={{ background: 'rgba(0,0,0,0.5)', border: 'none', cursor: 'pointer', borderRadius: '50%', width: 32, height: 32, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <button onClick={() => setStoryView(null)} style={{
+                background: 'rgba(0,0,0,0.5)', border: 'none', cursor: 'pointer',
+                borderRadius: '50%', width: 32, height: 32,
+                display: 'flex', alignItems: 'center', justifyContent: 'center'
+              }}>
                 <X size={18} color="#fff" />
               </button>
             </div>
             {currentStory.media_type === 'video'
-              ? <video src={imgSrc(currentStory.media_url)} autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              : <img src={imgSrc(currentStory.media_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              ? <video src={imgSrc(currentStory.media_url)} autoPlay controls style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              : <img src={imgSrc(currentStory.media_url)} alt="story" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
             }
-            <button style={{ position: 'absolute', left: 0, top: 0, width: '50%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', zIndex: 20 }}
-              onClick={() => storyView.index > 0 ? setStoryView({ ...storyView, index: storyView.index - 1 }) : setStoryView(null)} />
-            <button style={{ position: 'absolute', right: 0, top: 0, width: '50%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', zIndex: 20 }}
-              onClick={() => storyView.index < storyView.group.stories.length - 1 ? setStoryView({ ...storyView, index: storyView.index + 1 }) : setStoryView(null)} />
+            <div onClick={() => storyView.index > 0 ? setStoryView({ ...storyView, index: storyView.index - 1 }) : setStoryView(null)}
+              style={{ position: 'absolute', left: 0, top: 0, bottom: 0, width: '40%', cursor: 'pointer' }} />
+            <div onClick={() => storyView.index < storyView.group.stories.length - 1 ? setStoryView({ ...storyView, index: storyView.index + 1 }) : setStoryView(null)}
+              style={{ position: 'absolute', right: 0, top: 0, bottom: 0, width: '60%', cursor: 'pointer' }} />
           </div>
         </div>
       )}
 
-      {/* ── FEED COLUMN ── */}
-      <div className="hf-root" style={{ width: '100%', maxWidth: 500, paddingBottom: 40 }}>
+      {/* ════════════ FEED COLUMN ════════════ */}
+      <div style={{ flex: 1, minWidth: 0, maxWidth: 680, margin: '0 auto', padding: '20px 0' }}>
+
+        {/* ── TOP BAR (search + bell) ── */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 12, margin: '0 14px 16px' }}>
+          <div style={{
+            flex: 1, display: 'flex', alignItems: 'center', gap: 8,
+            background: '#111', border: '1px solid #1e1e1e', borderRadius: 12,
+            padding: '10px 14px'
+          }}>
+            <Search size={16} color="#555" />
+            <input placeholder="Search ChatVitte" className="cv-composer-input" />
+          </div>
+          <button style={{
+            background: '#111', border: '1px solid #1e1e1e', borderRadius: 12,
+            width: 42, height: 42, display: 'flex', alignItems: 'center',
+            justifyContent: 'center', cursor: 'pointer', position: 'relative'
+          }}>
+            <Bell size={18} color="#ccc" />
+            <span style={{
+              position: 'absolute', top: 8, right: 10, width: 8, height: 8,
+              borderRadius: '50%', background: '#ff4d00'
+            }} />
+          </button>
+        </div>
 
         {/* ── STORIES ── */}
-        <div className="stories-scroll" style={{ display: 'flex', gap: 14, padding: '14px 16px 10px', overflowX: 'auto' }}>
-
+        <div className="stories-scroll" style={{
+          display: 'flex', gap: 14, overflowX: 'auto',
+          padding: '4px 14px 16px', scrollSnapType: 'x mandatory'
+        }}>
           {/* My story */}
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
             <div style={{ position: 'relative' }}>
               {myStories.length > 0 ? (
-                <button onClick={() => setStoryView({ group: { user_id: currentUser?.id, username: currentUser?.username, profile_picture: currentUser?.profile_picture, stories: myStories }, index: 0 })}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  <Avatar src={currentUser?.profile_picture} name={currentUser?.username} size={62} storyRing />
+                <button onClick={() => setStoryView({
+                  group: { user_id: currentUser?.id, username: currentUser?.username, profile_picture: currentUser?.profile_picture, stories: myStories },
+                  index: 0
+                })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                  <Avatar src={currentUser?.profile_picture} name={currentUser?.username} size={62} ring="story" />
                 </button>
               ) : (
-                <label style={{ cursor: 'pointer', display: 'block' }}>
-                  <Avatar src={currentUser?.profile_picture} name={currentUser?.username} size={62} />
-                  <input type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleStory} />
-                </label>
+                <Avatar src={currentUser?.profile_picture} name={currentUser?.username} size={62} ring="none" />
               )}
               <label style={{
-                position: 'absolute', bottom: 0, right: 0,
-                width: 20, height: 20, borderRadius: '50%',
-                background: 'linear-gradient(135deg, #ff4d00, #c800ff)',
+                position: 'absolute', bottom: -2, right: -2,
+                background: 'linear-gradient(135deg,#ff4d00,#c800ff)',
+                width: 22, height: 22, borderRadius: '50%',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                border: '2px solid #0a0a0a', cursor: 'pointer',
+                cursor: 'pointer', border: '2px solid #0a0a0a'
               }}>
-                <Plus size={10} color="#fff" strokeWidth={3} />
-                <input type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleStory} />
+                <Plus size={13} color="#fff" />
+                <input ref={storyInputRef} type="file" accept="image/*,video/*" onChange={handleStory} style={{ display: 'none' }} />
               </label>
             </div>
-            <span style={{ fontSize: 10, color: '#555', fontWeight: 500, letterSpacing: '0.02em' }}>Your Story</span>
+            <span style={{ fontSize: 11, color: '#aaa', fontWeight: 500 }}>Your Story</span>
           </div>
 
           {stories.map(group => {
             const isLive = group.stories.some(s => s.is_live);
             return (
-              <div key={group.user_id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 5, flexShrink: 0 }}>
+              <div key={group.user_id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, flexShrink: 0 }}>
                 <div style={{ position: 'relative' }}>
-                  <button onClick={() => setStoryView({ group, index: 0 })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                    <Avatar src={group.profile_picture} name={group.username} size={62} liveRing={isLive} storyRing={!isLive} />
+                  <button onClick={() => setStoryView({ group, index: 0 })}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <Avatar src={group.profile_picture} name={group.username} size={62} ring={isLive ? 'live' : 'story'} />
                   </button>
-                  {isLive && <div className="cv-live-badge">LIVE</div>}
+                  {isLive && <span className="cv-live-badge">LIVE</span>}
                 </div>
-                <span style={{ fontSize: 10, color: '#555', fontWeight: 500, maxWidth: 64, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.username}</span>
+                <span style={{ fontSize: 11, color: '#aaa', fontWeight: 500, maxWidth: 70, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {group.username}
+                </span>
               </div>
             );
           })}
         </div>
 
         {/* ── COMPOSER ── */}
-        <div className="cv-composer">
+        <div className="cv-card" style={{ margin: '0 14px 16px', padding: '14px 16px' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <Avatar src={currentUser?.profile_picture} name={currentUser?.username} size={38} />
-            <input className="cv-composer-input" placeholder={`What's on your mind, ${currentUser?.username || 'you'}?`} readOnly />
-            <div style={{ color: '#ff4d00', opacity: 0.7 }}>
-              <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-                <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83" stroke="currentColor" strokeWidth="2" strokeLinecap="round"/>
-              </svg>
+            <Avatar src={currentUser?.profile_picture} name={currentUser?.username} size={36} />
+            <input placeholder={`What's on your mind, ${currentUser?.username || 'friend'}?`} className="cv-composer-input" />
+            <div style={{ display: 'flex', gap: 2, alignItems: 'center' }}>
+              {[...Array(5)].map((_, i) => (
+                <span key={i} style={{
+                  width: 3, height: 8 + Math.abs(2 - i) * 4,
+                  background: '#ff4d00', borderRadius: 2, opacity: 0.7
+                }} />
+              ))}
             </div>
           </div>
-          <div className="cv-composer-actions">
-            <button className="cv-composer-btn"><Image size={15} color="#a855f7" /><span style={{ color: '#888' }}>Photo</span></button>
-            <button className="cv-composer-btn"><Video size={15} color="#3b82f6" /><span style={{ color: '#888' }}>Video</span></button>
-            <button className="cv-composer-btn"><Mic size={15} color="#ff4d00" /><span style={{ color: '#888' }}>Voice</span></button>
-            <button className="cv-composer-btn"><Smile size={15} color="#eab308" /><span style={{ color: '#888' }}>Vibe</span></button>
+          <div style={{ display: 'flex', gap: 0, marginTop: 12, borderTop: '1px solid #1e1e1e', paddingTop: 10 }}>
+            <button className="cv-composer-btn"><ImageIcon size={16} color="#7c3aed" /> Photo</button>
+            <button className="cv-composer-btn"><Video size={16} color="#7c3aed" /> Video</button>
+            <button className="cv-composer-btn"><Mic size={16} color="#ff4d00" /> Voice</button>
+            <button className="cv-composer-btn"><Smile size={16} color="#ff9500" /> Vibe</button>
           </div>
         </div>
 
         {/* ── TODAY'S PULSE ── */}
-        <div className="cv-pulse">
+        <div className="cv-card" style={{
+          margin: '0 14px 16px', padding: 18,
+          display: 'grid', gridTemplateColumns: '1fr auto 1fr', gap: 16, alignItems: 'center'
+        }}>
           <div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12" stroke="#ff4d00" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"/></svg>
-              <span style={{ fontSize: 11, fontWeight: 700, color: '#ff4d00', fontFamily: "'Syne', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase' }}>Today's Pulse</span>
+              <TrendingUp size={14} color="#ff4d00" />
+              <span className="cv-syne" style={{ fontSize: 12, fontWeight: 800, color: '#ff4d00', letterSpacing: '0.08em' }}>TODAY'S PULSE</span>
             </div>
-            <p style={{ margin: 0, fontSize: 10, color: '#555', marginBottom: 6 }}>Kigali, Rwanda</p>
-            <p style={{ margin: 0, fontSize: 28, fontWeight: 900, color: '#fff', fontFamily: "'Syne', sans-serif", lineHeight: 1 }}>127</p>
-            <p style={{ margin: '2px 0 0', fontSize: 10, color: '#555' }}>people posting</p>
-            <div style={{ display: 'inline-flex', alignItems: 'center', gap: 4, marginTop: 6, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 6, padding: '2px 8px' }}>
-              <TrendingUp size={10} color="#22c55e" />
-              <span style={{ fontSize: 11, color: '#22c55e', fontWeight: 700 }}>23%</span>
-            </div>
+            <p style={{ margin: 0, color: '#888', fontSize: 12 }}>Kigali, Rwanda</p>
+            <p className="hf-syne" style={{ margin: '6px 0 0', color: '#fff', fontSize: 32, fontWeight: 900, lineHeight: 1 }}>127</p>
+            <p style={{ margin: '2px 0 8px', color: '#888', fontSize: 11 }}>people posting</p>
+            <span style={{
+              display: 'inline-flex', alignItems: 'center', gap: 4,
+              background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)',
+              borderRadius: 6, padding: '2px 8px', color: '#22c55e', fontSize: 11, fontWeight: 700
+            }}>↗ 23%</span>
           </div>
 
           {/* Radar visual */}
-          <div style={{ position: 'relative', width: 72, height: 72 }}>
-            <svg width="72" height="72" viewBox="0 0 72 72">
-              <circle cx="36" cy="36" r="30" fill="none" stroke="#1e1e1e" strokeWidth="1"/>
-              <circle cx="36" cy="36" r="20" fill="none" stroke="#1e1e1e" strokeWidth="1"/>
-              <circle cx="36" cy="36" r="10" fill="none" stroke="#1e1e1e" strokeWidth="1"/>
-              <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(200,0,255,0.15)" strokeWidth="1"/>
-              <circle cx="36" cy="36" r="4" fill="#c800ff"/>
-              <circle cx="50" cy="26" r="3" fill="#ff4d00"/>
-              <circle cx="24" cy="48" r="3" fill="#ff4d00" opacity="0.6"/>
-              <line x1="36" y1="36" x2="50" y2="26" stroke="rgba(255,77,0,0.3)" strokeWidth="1"/>
-              <line x1="36" y1="36" x2="24" y2="48" stroke="rgba(255,77,0,0.2)" strokeWidth="1"/>
+          <div style={{ width: 90, height: 90, position: 'relative' }}>
+            <svg viewBox="0 0 100 100" width="90" height="90">
+              {[20, 35, 50].map(r => (
+                <circle key={r} cx="50" cy="50" r={r} fill="none" stroke="rgba(200,0,255,0.25)" strokeWidth="0.5" />
+              ))}
+              <circle cx="32" cy="38" r="3" fill="#ff4d00" />
+              <circle cx="68" cy="44" r="3" fill="#c800ff" />
+              <circle cx="55" cy="68" r="3" fill="#ff4d00" />
+              <line x1="50" y1="50" x2="32" y2="38" stroke="rgba(200,0,255,0.5)" strokeWidth="0.5" />
+              <line x1="50" y1="50" x2="68" y2="44" stroke="rgba(200,0,255,0.5)" strokeWidth="0.5" />
+              <line x1="50" y1="50" x2="55" y2="68" stroke="rgba(200,0,255,0.5)" strokeWidth="0.5" />
+              <circle cx="50" cy="50" r="2" fill="#fff" />
             </svg>
           </div>
 
           <div>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-              <span style={{ fontSize: 16 }}>🌙</span>
-              <span style={{ fontSize: 12, fontWeight: 800, color: '#fff', fontFamily: "'Syne', sans-serif" }}>Night Vibe</span>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 6 }}>
+              <span style={{ fontSize: 14 }}>🌙</span>
+              <span className="hf-syne" style={{ fontSize: 13, fontWeight: 800, color: '#c800ff' }}>Night Vibe</span>
             </div>
-            <span style={{ display: 'inline-block', fontSize: 10, fontWeight: 700, color: '#22c55e', background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 5, padding: '2px 7px', marginBottom: 5 }}>Very Active</span>
-            <p style={{ margin: 0, fontSize: 10, color: '#555', lineHeight: 1.4 }}>People are posting more at night</p>
+            <span style={{
+              display: 'inline-block', background: 'rgba(34,197,94,0.1)',
+              border: '1px solid rgba(34,197,94,0.3)', borderRadius: 6,
+              padding: '3px 10px', color: '#22c55e', fontSize: 11, fontWeight: 700, marginBottom: 6
+            }}>Very Active</span>
+            <p style={{ margin: 0, color: '#888', fontSize: 11, lineHeight: 1.4 }}>People are posting more at night</p>
           </div>
         </div>
 
         {isPopular && posts.length > 0 && (
-          <div style={{ padding: '4px 16px 12px', display: 'flex', alignItems: 'center', gap: 10 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, margin: '20px 14px 12px' }}>
             <div style={{ flex: 1, height: 1, background: '#1e1e1e' }} />
-            <span style={{ fontSize: 11, color: '#555', fontWeight: 600, whiteSpace: 'nowrap', letterSpacing: '0.04em' }}>✦ Suggested for you</span>
+            <span className="hf-syne" style={{ color: '#888', fontSize: 11, fontWeight: 700, letterSpacing: '0.1em' }}>✦ SUGGESTED FOR YOU</span>
             <div style={{ flex: 1, height: 1, background: '#1e1e1e' }} />
           </div>
         )}
 
         {posts.length === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: '#2a2a2a', gap: 14 }}>
-            <MessageCircle size={44} />
-            <p style={{ fontSize: 14, textAlign: 'center', color: '#444', fontFamily: "'DM Sans', sans-serif" }}>No posts yet.<br />Be the first to post!</p>
+          <div style={{ textAlign: 'center', padding: '60px 20px', color: '#555' }}>
+            <MessageCircle size={32} style={{ opacity: 0.4, marginBottom: 12 }} />
+            <p style={{ margin: 0, fontSize: 14 }}>No posts yet.</p>
+            <p style={{ margin: '4px 0 0', fontSize: 12 }}>Be the first to post!</p>
           </div>
         )}
 
         {/* ── POSTS ── */}
         {posts.map(post => (
-          <div key={post.id} className="cv-post">
-
+          <article key={post.id} className="cv-card" style={{ margin: '0 14px 16px', overflow: 'hidden' }}>
             {/* Post header */}
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '12px 14px 10px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '14px 16px' }}>
               <button onClick={() => onViewProfile && onViewProfile(post.user_id)}
                 style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <Avatar src={post.profile_picture} name={post.username} size={40} />
+                <Avatar src={post.profile_picture} name={post.username} size={40} ring="story" />
                 <div style={{ textAlign: 'left' }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
-                    <p style={{ fontSize: 14, fontWeight: 700, margin: 0, color: '#fff', fontFamily: "'DM Sans', sans-serif" }}>{post.username}</p>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <p style={{ margin: 0, color: '#fff', fontSize: 14, fontWeight: 700 }}>{post.username}</p>
                     {post.is_verified && (
-                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#3b82f6"><path d="M9 12l2 2 4-4M7.835 4.697a3.42 3.42 0 001.946-.806 3.42 3.42 0 014.438 0 3.42 3.42 0 001.946.806 3.42 3.42 0 013.138 3.138 3.42 3.42 0 00.806 1.946 3.42 3.42 0 010 4.438 3.42 3.42 0 00-.806 1.946 3.42 3.42 0 01-3.138 3.138 3.42 3.42 0 00-1.946.806 3.42 3.42 0 01-4.438 0 3.42 3.42 0 00-1.946-.806 3.42 3.42 0 01-3.138-3.138 3.42 3.42 0 00-.806-1.946 3.42 3.42 0 010-4.438 3.42 3.42 0 00.806-1.946 3.42 3.42 0 013.138-3.138z"/></svg>
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="#c800ff">
+                        <path d="M12 2l2.39 3.42L18.5 4l-.41 4.13L22 10l-2.39 3.42L21 17.5l-4.13.41L15.42 22 12 19.61 8.58 22l-1.45-4.09L3 17.5l1.91-4.08L2.5 10l3.91-1.87L6 4l4.13 1.42L12 2zm-1.5 13.5l5-5-1.06-1.06-3.94 3.94-1.94-1.94L7.5 12.5l3 3z"/>
+                      </svg>
                     )}
                   </div>
-                  <p style={{ fontSize: 11, color: '#444', margin: 0, fontWeight: 400 }}>
+                  <p style={{ margin: 0, color: '#666', fontSize: 11 }}>
                     {formatTime(post.created_at)} · {post.location || 'Kigali, Rwanda'}
                   </p>
                 </div>
               </button>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#444', padding: 4 }}>
+              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#666' }}>
                 <MoreHorizontal size={18} />
               </button>
             </div>
 
             {/* Caption */}
             {post.caption && (
-              <div style={{ padding: '0 14px 10px', fontSize: 14, color: '#ccc', lineHeight: 1.5, fontFamily: "'DM Sans', sans-serif" }}>
+              <div style={{ padding: '0 16px 12px', color: '#e5e5e5', fontSize: 14, lineHeight: 1.5 }}>
                 {post.caption.split(' ').map((word, i) =>
                   word.startsWith('#')
                     ? <span key={i} className="cv-hashtag">{word} </span>
@@ -473,99 +506,113 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
             )}
 
             {/* Media */}
-            <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: '#0d0d0d', overflow: 'hidden' }}>
-              {post.media_type === 'video'
-                ? <video src={imgSrc(post.media_url)} controls style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <img src={imgSrc(post.media_url)} alt="post" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-              }
-              {/* Carousel indicator */}
-              {post.images_count > 1 && (
-                <div style={{ position: 'absolute', top: 12, right: 12, background: 'rgba(0,0,0,0.6)', borderRadius: 8, padding: '3px 9px', fontSize: 11, fontWeight: 700, color: '#fff', fontFamily: "'Syne', sans-serif" }}>
-                  1/{post.images_count}
-                </div>
-              )}
-            </div>
+            {post.media_url && (
+              <div style={{ position: 'relative', background: '#000' }}>
+                {post.media_type === 'video'
+                  ? <video src={imgSrc(post.media_url)} controls style={{ width: '100%', display: 'block', maxHeight: 600, objectFit: 'cover' }} />
+                  : <img src={imgSrc(post.media_url)} alt="" style={{ width: '100%', display: 'block', maxHeight: 600, objectFit: 'cover' }} />
+                }
+                {post.images_count > 1 && (
+                  <div style={{
+                    position: 'absolute', top: 12, right: 12,
+                    background: 'rgba(0,0,0,0.6)', color: '#fff',
+                    fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 12
+                  }}>
+                    1/{post.images_count}
+                  </div>
+                )}
+              </div>
+            )}
 
             {/* Actions */}
-            <div style={{ padding: '12px 14px 4px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ padding: '12px 16px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
                   <button className="cv-post-action" onClick={() => handleLike(post.id, post.is_liked)}>
-                    <Heart size={22} fill={post.is_liked ? '#ef4444' : 'none'} color={post.is_liked ? '#ef4444' : '#666'} strokeWidth={2} />
-                    <span style={{ color: post.is_liked ? '#ef4444' : '#666' }}>{Number(post.likes_count || 0).toLocaleString()}</span>
+                    <Heart size={20} fill={post.is_liked ? '#ff007a' : 'none'} color={post.is_liked ? '#ff007a' : '#aaa'} />
+                    <span style={{ color: post.is_liked ? '#ff007a' : '#aaa' }}>
+                      {Number(post.likes_count || 0).toLocaleString()}
+                    </span>
                   </button>
-                  <button className="cv-post-action" onClick={() => { setShowComments(p => ({ ...p, [post.id]: !p[post.id] })); fetchComments(post.id); }}>
-                    <MessageCircle size={22} color="#666" strokeWidth={2} />
+                  <button className="cv-post-action" onClick={() => {
+                    setShowComments(p => ({ ...p, [post.id]: !p[post.id] }));
+                    fetchComments(post.id);
+                  }}>
+                    <MessageCircle size={20} />
                     <span>{post.comments_count || 0}</span>
                   </button>
                   <button className="cv-post-action">
-                    <Send size={21} color="#666" strokeWidth={2} />
+                    <Send size={20} color="#c800ff" />
                     <span>{post.shares_count || 0}</span>
                   </button>
                 </div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                  <Bookmark size={20} color="#444" strokeWidth={2} style={{ cursor: 'pointer' }} />
-                  <Smile size={20} color="#444" strokeWidth={2} style={{ cursor: 'pointer' }} />
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <button className="cv-post-action"><Smile size={20} color="#ff9500" /></button>
+                  <button className="cv-post-action"><Bookmark size={20} /></button>
                 </div>
               </div>
 
-              {/* Comments section */}
+              {/* Comments */}
               {showComments[post.id] && (
-                <div style={{ marginBottom: 8 }}>
+                <div style={{ marginTop: 10, paddingTop: 10, borderTop: '1px solid #1e1e1e' }}>
                   {(comments[post.id] || []).map(c => (
-                    <p key={c.id} style={{ fontSize: 13, margin: '4px 0', color: '#aaa', fontFamily: "'DM Sans', sans-serif" }}>
-                      <span style={{ fontWeight: 700, color: '#ddd', marginRight: 5 }}>{c.username}</span>{c.content}
-                    </p>
+                    <div key={c.id} style={{ fontSize: 13, color: '#ccc', marginBottom: 6 }}>
+                      <span style={{ color: '#fff', fontWeight: 700, marginRight: 6 }}>{c.username}</span>
+                      {c.content}
+                    </div>
                   ))}
                 </div>
               )}
 
               {/* Comment input */}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, borderTop: '1px solid #1a1a1a', paddingTop: 10, paddingBottom: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 10, paddingTop: 10, borderTop: '1px solid #1e1e1e' }}>
                 <Avatar src={currentUser?.profile_picture} name={currentUser?.username} size={26} />
                 <input
-                  className="cv-comment-input"
                   placeholder="Add a comment..."
+                  className="cv-comment-input"
                   value={commentText[post.id] || ''}
                   onChange={(e) => setCommentText(p => ({ ...p, [post.id]: e.target.value }))}
                   onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
                 />
                 {commentText[post.id] && (
-                  <button onClick={() => handleComment(post.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ff4d00', fontSize: 12, fontWeight: 700, fontFamily: "'Syne', sans-serif", letterSpacing: '0.04em' }}>
-                    POST
-                  </button>
+                  <button onClick={() => handleComment(post.id)} className="hf-syne" style={{
+                    background: 'none', border: 'none', cursor: 'pointer',
+                    color: '#ff4d00', fontSize: 12, fontWeight: 700, letterSpacing: '0.04em'
+                  }}>POST</button>
                 )}
               </div>
             </div>
-          </div>
+          </article>
         ))}
 
         {/* ── TRENDING NOW ── */}
         {posts.length > 0 && (
-          <div style={{ padding: '4px 14px 20px' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <div style={{ margin: '0 14px 16px' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 10 }}>
+              <div className="cv-section-title">
                 <span style={{ fontSize: 16 }}>🔥</span>
-                <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 15, color: '#fff', letterSpacing: '-0.2px' }}>Trending Now</span>
+                <span style={{ color: '#fff' }}>Trending Now</span>
               </div>
-              <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c800ff', fontSize: 12, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>See all →</button>
+              <button className="cv-see-all">See all →</button>
             </div>
-            <div style={{ display: 'flex', gap: 8 }}>
+            <div style={{ display: 'flex', gap: 10 }}>
               {[
-                { emoji: '😊', label: 'Mood Swing', count: '3.2K' },
-                { emoji: '🚗', label: 'Night Drive', count: '2.7K' },
-                { emoji: '⚡', label: 'Unstoppable', count: '2.1K' },
+                { emoji: '😊', label: 'Mood Swing', count: '3.2K', bg: 'rgba(255,149,0,0.15)' },
+                { emoji: '🚗', label: 'Night Drive', count: '2.7K', bg: 'rgba(59,130,246,0.15)' },
+                { emoji: '⚡', label: 'Unstoppable', count: '2.1K', bg: 'rgba(255,77,0,0.15)' },
               ].map((t, i) => (
                 <div key={i} className="cv-trending-card">
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, minWidth: 0 }}>
-                    <span style={{ fontSize: 20, flexShrink: 0 }}>{t.emoji}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10, minWidth: 0 }}>
+                    <div style={{
+                      width: 32, height: 32, borderRadius: 8, background: t.bg,
+                      display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16, flexShrink: 0
+                    }}>{t.emoji}</div>
                     <div style={{ minWidth: 0 }}>
-                      <p style={{ margin: 0, fontSize: 12, fontWeight: 700, color: '#fff', fontFamily: "'DM Sans', sans-serif", overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{t.label}</p>
-                      <p style={{ margin: 0, fontSize: 10, color: '#555' }}>{t.count} posts</p>
+                      <p style={{ margin: 0, color: '#fff', fontSize: 12, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{t.label}</p>
+                      <p style={{ margin: 0, color: '#666', fontSize: 10 }}>{t.count} posts</p>
                     </div>
                   </div>
-                  <TrendingUp size={14} color="#22c55e" style={{ flexShrink: 0 }} />
+                  <TrendingUp size={14} color="#22c55e" />
                 </div>
               ))}
             </div>
@@ -573,59 +620,82 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
         )}
       </div>
 
-      {/* ── RIGHT SIDEBAR (desktop) ── */}
-      <div className="hf-right" style={{ width: 270, flexShrink: 0, padding: '28px 0 24px 20px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+      {/* ════════════ RIGHT SIDEBAR ════════════ */}
+      <aside className="hf-right" style={{ width: 320, flexShrink: 0, padding: '20px 14px', display: 'flex', flexDirection: 'column', gap: 16 }}>
         {suggested.length > 0 && (
-          <>
-            <p style={{ fontSize: 11, fontWeight: 700, color: '#444', margin: '0 0 16px', fontFamily: "'Syne', sans-serif", letterSpacing: '0.06em', textTransform: 'uppercase' }}>Suggested for you</p>
+          <div className="cv-card" style={{ padding: 16 }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+              <span className="cv-section-title" style={{ color: '#fff', fontSize: 12 }}>SUGGESTED FOR YOU</span>
+              <button className="cv-see-all" style={{ fontSize: 11 }}>See all</button>
+            </div>
             {suggested.map(u => (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
                 <button onClick={() => onViewProfile && onViewProfile(u.id)}
                   style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flex: 1, minWidth: 0 }}>
                   <Avatar src={u.profile_picture} name={u.username} size={38} />
-                  <div style={{ minWidth: 0, textAlign: 'left' }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, margin: 0, color: '#ddd', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontFamily: "'DM Sans', sans-serif" }}>{u.username}</p>
-                    <p style={{ fontSize: 11, color: '#444', margin: 0 }}>Suggested for you</p>
+                  <div style={{ textAlign: 'left', minWidth: 0 }}>
+                    <p style={{ margin: 0, color: '#fff', fontSize: 13, fontWeight: 700, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{u.username}</p>
+                    <p style={{ margin: 0, color: '#666', fontSize: 11 }}>Suggested for you</p>
                   </div>
                 </button>
                 <button className="cv-follow-btn" onClick={() => handleFollow(u.id)}>Follow</button>
               </div>
             ))}
-          </>
+          </div>
         )}
 
         {/* Live rooms teaser */}
-        <div style={{ marginTop: 24 }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: 7 }}>
-              <Radio size={13} color="#ff4d00" />
-              <span style={{ fontFamily: "'Syne', sans-serif", fontWeight: 800, fontSize: 12, color: '#fff', letterSpacing: '0.04em' }}>LIVE ROOMS</span>
+        <div className="cv-card" style={{ padding: 16 }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+            <div className="cv-section-title" style={{ color: '#fff', fontSize: 12 }}>
+              <Radio size={14} color="#22c55e" />
+              <span>LIVE ROOMS</span>
             </div>
-            <button style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#c800ff', fontSize: 11, fontWeight: 700, fontFamily: "'DM Sans', sans-serif" }}>See all →</button>
+            <button className="cv-see-all" style={{ fontSize: 11 }}>See all →</button>
           </div>
-          {[{ count: 231, color: '#ff4d00' }, { count: 187, color: '#c800ff' }, { count: 98, color: '#3b82f6' }].map((room, i) => (
-            <div key={i} style={{ background: '#111', border: '1px solid #1e1e1e', borderRadius: 12, padding: '10px 12px', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}
+          {[
+            { count: 231, color: '#ff4d00' },
+            { count: 187, color: '#c800ff' },
+            { count: 98, color: '#3b82f6' }
+          ].map((room, i) => (
+            <div key={i} style={{
+              display: 'flex', alignItems: 'center', gap: 12,
+              padding: 10, marginBottom: i < 2 ? 8 : 0,
+              background: '#0d0d0d', border: '1px solid #1e1e1e',
+              borderRadius: 12, cursor: 'pointer', transition: 'border-color 0.15s'
+            }}
               onMouseEnter={e => e.currentTarget.style.borderColor = '#2a2a2a'}
-              onMouseLeave={e => e.currentTarget.style.borderColor = '#1e1e1e'}
-            >
-              <div style={{ width: 36, height: 36, borderRadius: 10, background: `${room.color}22`, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                <Radio size={16} color={room.color} />
+              onMouseLeave={e => e.currentTarget.style.borderColor = '#1e1e1e'}>
+              <div style={{
+                width: 38, height: 38, borderRadius: 10,
+                background: `${room.color}25`, display: 'flex',
+                alignItems: 'center', justifyContent: 'center', flexShrink: 0
+              }}>
+                <Radio size={18} color={room.color} />
               </div>
-              <div>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ background: room.color, borderRadius: 4, padding: '1px 6px', fontSize: 9, fontWeight: 800, color: '#fff', fontFamily: "'Syne', sans-serif" }}>LIVE</span>
-                  <span style={{ fontSize: 12, fontWeight: 600, color: '#ccc', fontFamily: "'DM Sans', sans-serif" }}>{room.count} listening</span>
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                  <span style={{
+                    background: '#ef4444', color: '#fff', fontSize: 9, fontWeight: 800,
+                    padding: '1px 5px', borderRadius: 3, fontFamily: 'Syne, sans-serif', letterSpacing: '0.05em'
+                  }}>LIVE</span>
+                  <span style={{ color: '#fff', fontSize: 12, fontWeight: 600 }}>{room.count} listening</span>
                 </div>
-                <div style={{ display: 'flex', marginTop: 3 }}>
+                <div style={{ display: 'flex', alignItems: 'center' }}>
                   {[...Array(4)].map((_, j) => (
-                    <div key={j} style={{ width: 18, height: 18, borderRadius: '50%', background: `hsl(${j * 60 + 20},80%,50%)`, border: '2px solid #111', marginLeft: j > 0 ? -6 : 0 }} />
+                    <div key={j} style={{
+                      width: 16, height: 16, borderRadius: '50%',
+                      background: ['#ff4d00', '#22c55e', '#c800ff', '#3b82f6'][j],
+                      border: '2px solid #0d0d0d',
+                      marginLeft: j > 0 ? -6 : 0
+                    }} />
                   ))}
                 </div>
               </div>
             </div>
           ))}
         </div>
-      </div>
+      </aside>
     </div>
   );
 };
