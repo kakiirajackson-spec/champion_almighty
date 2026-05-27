@@ -111,15 +111,16 @@ const Dashboard = () => {
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#000000', color: '#fff', overflow: 'hidden', fontFamily: "'Plus Jakarta Sans', 'DM Sans', sans-serif" }}>
 
-      <style>{`
+     <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
         * { 
           box-sizing: border-box; 
         }
 
-        body {
-          background-color: #08080c !important; /* Premium midnight dark backdrop */
+        /* FORCE THE GLOBAL MIDNIGHT BACKGROUND */
+        body, html, #root, .cv-main {
+          background-color: #0b0d14 !important; /* Premium deep midnight navy backdrop */
         }
 
         ::-webkit-scrollbar { width: 4px; }
@@ -137,8 +138,8 @@ const Dashboard = () => {
           top: 0; left: 0;
           height: 100vh;
           z-index: 20;
-          background: #08080c;
-          border-right: 1px solid #16161f; /* Clean divider line */
+          background: #0b0d14 !important;
+          border-right: 1px solid #161925 !important;
         }
 
         .cv-nav-btn {
@@ -165,7 +166,6 @@ const Dashboard = () => {
           color: #ffffff; 
         }
         
-        /* Translucent glowing background pill for the active tab */
         .cv-nav-btn.active { 
           background: rgba(255, 255, 255, 0.08) !important; 
           color: #ffffff !important; 
@@ -191,26 +191,12 @@ const Dashboard = () => {
           transition: all 0.2s ease;
           box-shadow: 0 8px 24px rgba(255, 77, 0, 0.25);
         }
-        .cv-create-btn-wide:hover { 
-          opacity: 0.95; 
-          transform: translateY(-1px); 
-          box-shadow: 0 12px 28px rgba(255, 77, 0, 0.35);
-        }
 
         /* ── LAYOUT MECHANICS ── */
-        .cv-main {
-          flex: 1;
-          margin-left: 260px;
-          display: flex; 
-          flex-direction: column;
-          overflow: hidden;
-          background: #08080c;
-        }
-
         .cv-content-wrapper {
           display: flex !important;
           justify-content: center !important;
-          gap: 40px !important; /* Luxury spacing between columns */
+          gap: 40px !important;
           width: 100% !important;
           max-width: 1180px !important;
           margin: 0 auto !important;
@@ -220,7 +206,7 @@ const Dashboard = () => {
 
         .cv-feed-container {
           flex: 1 !important;
-          max-width: 580px !important; /* Tightened container width from the mockup */
+          max-width: 580px !important;
           width: 100% !important;
           padding: 40px 0 !important;
           height: 100% !important;
@@ -235,15 +221,29 @@ const Dashboard = () => {
           overflow-y: auto !important;
         }
 
-        /* ── TARGET COMPONENT CARDS FOR COMPLETE COLOR RESKIN ── */
-        /* Forces your deep container components to color match the charcoal cards */
-        .cv-feed-container > div, 
-        .cv-sidebar-right-panel > div,
-        [class*="post"], [class*="card"], [class*="Panel"],
-        .cv-feed-container > div > div {
-          background: #111116 !important; /* Premium charcoal card surfaces */
-          border: 1px solid #1a1a24 !important; /* Ultra-thin border definition */
-          border-radius: 18px !important;
+        /* ── THE NUCLEAR OVERRIDE: FORCE CARDS TO HAVE THE TINTED VIBE ── */
+        /* This aggressively breaks through nested components to style your blocks */
+        .cv-feed-container div, 
+        .cv-sidebar-right-panel div,
+        [style*="background-color: rgb(0, 0, 0)"],
+        [style*="background: rgb(0, 0, 0)"],
+        [class*="bg-black"], [class*="bg-zinc"], [class*="bg-neutral"] {
+          background-color: #121420 !important; /* True premium charcoal/navy tint card face */
+          background: #121420 !important;
+          border: 1px solid #1e2235 !important; /* Thin crisp design borders */
+          border-radius: 16px !important;
+        }
+
+        /* Keep text colors clean */
+        span, h1, h2, h3, p, input, textarea {
+          color: #ffffff !important;
+        }
+        
+        /* Stop text containers from accidentally growing borders */
+        span, p, h1, h2, h3 {
+          border: none !important;
+          background: transparent !important;
+          background-color: transparent !important;
         }
 
         .cv-sidebar-profile {
@@ -257,10 +257,10 @@ const Dashboard = () => {
           transition: background 0.2s;
           width: 100%;
           text-align: left;
-          background: transparent;
-          border: none;
+          background: transparent !important;
+          border: none !important;
         }
-        .cv-sidebar-profile:hover { background: rgba(255, 255, 255, 0.03); }
+        .cv-sidebar-profile:hover { background: rgba(255, 255, 255, 0.03) !important; }
 
         @media (max-width: 1024px) {
           .cv-sidebar { display: none !important; }
