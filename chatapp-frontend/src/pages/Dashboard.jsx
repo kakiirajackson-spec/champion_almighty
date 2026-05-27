@@ -207,14 +207,15 @@ const Dashboard = () => {
           padding: 0 16px !important;
         }
 
-        .cv-feed-container {
-          flex: 1 !important;
-          max-width: 680px !important;
-          width: 100% !important;
-          padding: 24px 0 !important;
-          height: 100% !important;
-          overflow-y: auto !important;
-        }
+        /* Change this line inside your Dashboard.jsx <style> tag: */
+.cv-feed-container {
+  flex: 1 !important;
+  max-width: 580px !important; /* Changed from 680px to 580px for a tighter feel */
+  width: 100% !important;
+  padding: 24px 0 !important;
+  height: 100% !important;
+  overflow-y: auto !important;
+}
 
         .cv-sidebar-right-panel {
           width: 340px !important;
