@@ -114,31 +114,38 @@ const Dashboard = () => {
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
 
-        * { box-sizing: border-box; }
+        * { 
+          box-sizing: border-box; 
+        }
+
+        body {
+          background-color: #08080c !important; /* Premium midnight dark backdrop */
+        }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #1c1c1e; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #1f1f24; border-radius: 4px; }
 
+        /* ── SIDEBAR STYLING ── */
         .cv-sidebar {
           width: 260px;
           flex-shrink: 0;
           display: flex;
           flex-direction: column;
-          padding: 24px 16px;
+          padding: 32px 24px;
           position: fixed;
           top: 0; left: 0;
           height: 100vh;
           z-index: 20;
-          background: #000000;
-          border-right: 1px solid #121214;
+          background: #08080c;
+          border-right: 1px solid #16161f; /* Clean divider line */
         }
 
         .cv-nav-btn {
           width: 100%;
-          height: 48px;
-          border-radius: 12px;
-          background: none;
+          height: 52px;
+          border-radius: 14px;
+          background: transparent;
           border: none;
           cursor: pointer;
           display: flex; 
@@ -146,19 +153,29 @@ const Dashboard = () => {
           gap: 16px;
           padding: 0 16px;
           position: relative;
-          transition: background 0.2s, color 0.2s;
-          color: #8e8e93;
+          transition: all 0.2s ease;
+          color: #7c7e8c;
           font-family: 'Plus Jakarta Sans', sans-serif;
           font-size: 15px;
           font-weight: 500;
+          letter-spacing: -0.2px;
         }
-        .cv-nav-btn:hover { background: #0c0c0e; color: #ffffff; }
-        .cv-nav-btn.active { background: #0c0c0e; color: #ffffff; font-weight: 600; }
+        .cv-nav-btn:hover { 
+          background: rgba(255, 255, 255, 0.03); 
+          color: #ffffff; 
+        }
+        
+        /* Translucent glowing background pill for the active tab */
+        .cv-nav-btn.active { 
+          background: rgba(255, 255, 255, 0.08) !important; 
+          color: #ffffff !important; 
+          font-weight: 600; 
+        }
 
         .cv-create-btn-wide {
           width: 100%;
-          height: 48px;
-          border-radius: 12px;
+          height: 50px;
+          border-radius: 14px;
           background: linear-gradient(135deg, #ff4d00, #c800ff);
           border: none;
           cursor: pointer;
@@ -166,63 +183,67 @@ const Dashboard = () => {
           align-items: center; 
           justify-content: center;
           gap: 10px;
-          margin-top: 12px;
+          margin-top: 16px;
           color: #ffffff;
           font-family: 'Plus Jakarta Sans', sans-serif;
           font-size: 15px;
           font-weight: 600;
-          transition: opacity 0.2s, transform 0.15s;
-          box-shadow: 0 4px 20px rgba(255, 77, 0, 0.2);
+          transition: all 0.2s ease;
+          box-shadow: 0 8px 24px rgba(255, 77, 0, 0.25);
         }
-        .cv-create-btn-wide:hover { opacity: 0.95; transform: scale(1.01); }
-
-        .cv-badge {
-          background: #e53e3e;
-          border-radius: 20px;
-          padding: 2px 6px;
-          font-size: 11px; 
-          font-weight: 700; 
-          color: #fff;
-          margin-left: auto;
+        .cv-create-btn-wide:hover { 
+          opacity: 0.95; 
+          transform: translateY(-1px); 
+          box-shadow: 0 12px 28px rgba(255, 77, 0, 0.35);
         }
 
+        /* ── LAYOUT MECHANICS ── */
         .cv-main {
           flex: 1;
           margin-left: 260px;
           display: flex; 
           flex-direction: column;
           overflow: hidden;
-          background: #000000;
+          background: #08080c;
         }
 
-        /* Enforce exact 3-column configuration framework widths */
         .cv-content-wrapper {
           display: flex !important;
           justify-content: center !important;
-          gap: 32px !important;
+          gap: 40px !important; /* Luxury spacing between columns */
           width: 100% !important;
-          max-width: 1140px !important;
+          max-width: 1180px !important;
           margin: 0 auto !important;
           height: 100% !important;
-          padding: 0 16px !important;
+          padding: 0 24px !important;
         }
 
-        /* Change this line inside your Dashboard.jsx <style> tag: */
-.cv-feed-container {
-  flex: 1 !important;
-  max-width: 580px !important; /* Changed from 680px to 580px for a tighter feel */
-  width: 100% !important;
-  padding: 24px 0 !important;
-  height: 100% !important;
-  overflow-y: auto !important;
-}
-
-        .cv-sidebar-right-panel {
-          width: 340px !important;
-          flex-shrink: 0 !important;
-          padding: 24px 0 !important;
+        .cv-feed-container {
+          flex: 1 !important;
+          max-width: 580px !important; /* Tightened container width from the mockup */
+          width: 100% !important;
+          padding: 40px 0 !important;
           height: 100% !important;
           overflow-y: auto !important;
+        }
+
+        .cv-sidebar-right-panel {
+          width: 320px !important;
+          flex-shrink: 0 !important;
+          padding: 40px 0 !important;
+          height: 100% !important;
+          overflow-y: auto !important;
+        }
+
+        /* ── TARGET COMPONENT CARDS FOR COMPLETE COLOR RESKIN ── */
+        /* Forces your deep container components to color match the charcoal cards */
+        .cv-feed-container > div, 
+        .cv-sidebar-right-panel > div,
+        [class*="post"], [class*="card"], [class*="Panel"],
+        .cv-feed-container > div > div {
+          background: #111116 !important; /* Premium charcoal card surfaces */
+          border: 1px solid #1a1a24 !important; /* Ultra-thin border definition */
+          border-radius: 18px !important;
         }
 
         .cv-sidebar-profile {
@@ -230,8 +251,8 @@ const Dashboard = () => {
           display: flex;
           align-items: center;
           gap: 12px;
-          padding: 12px;
-          border-radius: 12px;
+          padding: 14px;
+          border-radius: 14px;
           cursor: pointer;
           transition: background 0.2s;
           width: 100%;
@@ -239,48 +260,12 @@ const Dashboard = () => {
           background: transparent;
           border: none;
         }
-        .cv-sidebar-profile:hover { background: #0c0c0e; }
-
-        .cv-topbar {
-          display: none;
-          align-items: center; justify-content: space-between;
-          padding: 12px 18px;
-          background: #000000;
-          border-bottom: 1px solid #121214;
-          flex-shrink: 0;
-        }
-        .cv-topbar-logo { display: flex; align-items: center; gap: 8px; }
-        .cv-topbar-logo-c {
-          width: 30px; height: 30px; border-radius: 9px;
-          background: linear-gradient(135deg, #ff4d00, #c800ff);
-          display: flex; align-items: center; justify-content: center;
-          font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 900; color: #fff;
-        }
-        .cv-topbar-name { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #fff; }
-        .cv-topbar-actions { display: flex; align-items: center; gap: 14px; }
-        .cv-topbar-icon-btn { background: none; border: none; cursor: pointer; color: #888; }
-
-        .cv-bottom-nav {
-          display: none;
-          align-items: center;
-          background: #000000;
-          border-top: 1px solid #121214;
-          flex-shrink: 0;
-          height: 64px;
-          padding-bottom: env(safe-area-inset-bottom);
-        }
-        .cv-bottom-item {
-          flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-          background: none; border: none; cursor: pointer; color: #4e4e52;
-        }
-        .cv-bottom-item.active { color: #fff; }
+        .cv-sidebar-profile:hover { background: rgba(255, 255, 255, 0.03); }
 
         @media (max-width: 1024px) {
           .cv-sidebar { display: none !important; }
           .cv-main { margin-left: 0 !important; }
-          .cv-topbar { display: flex !important; }
-          .cv-bottom-nav { display: flex !important; }
-          .cv-feed-container { max-width: 100% !important; }
+          .cv-feed-container { max-width: 100% !important; padding: 20px 16px !important; }
           .cv-sidebar-right-panel { display: none !important; }
         }
       `}</style>
