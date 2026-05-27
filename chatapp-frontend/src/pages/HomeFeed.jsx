@@ -179,19 +179,15 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
         .stories-scroll::-webkit-scrollbar { display: none; }
         .stories-scroll { -ms-overflow-style: none; scrollbar-width: none; }
 
-       .cv-card {
+      .cv-card {
   background: rgba(18,18,18,0.7);
   backdrop-filter: blur(20px);
   -webkit-backdrop-filter: blur(20px);
-
   border: 1px solid rgba(255,255,255,0.06);
-
   border-radius: 24px;
-
   box-shadow:
     0 0 40px rgba(200,0,255,0.08),
     0 0 80px rgba(255,77,0,0.04);
-
   transition: all 0.3s ease;
 }
         .cv-card:hover { border-color: #2a2a2a; }
