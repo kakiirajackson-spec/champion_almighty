@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Search, PlusSquare, Film, MessageCircle, Bell, Compass, Settings, Bookmark, User } from 'lucide-react';
+import { Home, Search, PlusSquare, Film, MessageCircle, Bell, Compass } from 'lucide-react';
 import HomeFeed from './HomeFeed';
 import SearchPage from './SearchPage';
 import Reels from './Reels';
@@ -8,7 +8,7 @@ import DMs from './DMs';
 import Profile from './Profile';
 import CreatePost from './CreatePost';
 import Notifications from './Notifications';
-import SettingsPage from './Settings';
+import Settings from './Settings';
 import { BACKEND_URL } from '../api';
 
 const imgSrc = (url) => {
@@ -25,6 +25,7 @@ const Dashboard = () => {
   const [viewUserId, setViewUserId] = useState(null);
   const [dmUserId, setDmUserId] = useState(null);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [hoveredNav, setHoveredNav] = useState(null);
 
   useEffect(() => { if (!token) navigate('/login'); }, []);
 
@@ -48,178 +49,257 @@ const Dashboard = () => {
 
   const profilePic = user?.profile_picture;
 
+  const renderPage = () => {
+    switch (active) {
+      case 'home': return <HomeFeed token={token} currentUser={user} onViewProfile={handleViewProfile} />;
+      case 'search': return <SearchPage token={token} currentUser={user} onViewProfile={handleViewProfile} />;
+      case 'create': return <CreatePost token={token} currentUser={user} onDone={() => setActive('home')} />;
+      case 'reels': return <Reels token={token} currentUser={user} />;
+      case 'dms': return <DMs token={token} currentUser={user} openUserId={dmUserId} />;
+      case 'notifications': return <Notifications token={token} currentUser={user} onViewProfile={handleViewProfile} />;
+      case 'settings': return <Settings onBack={() => setActive('profile')} />;
+      case 'profile': return (
+        <Profile
+          token={token} currentUser={user}
+          userId={viewUserId || user?.id}
+          onBack={viewUserId ? () => { setViewUserId(null); setActive('search'); } : null}
+          onViewProfile={handleViewProfile}
+          onGoToDMs={handleGoToDMs}
+          onSettings={() => setActive('settings')}
+        />
+      );
+      default: return <HomeFeed token={token} currentUser={user} onViewProfile={handleViewProfile} />;
+    }
+  };
+
   const ProfileAvatar = ({ size = 28, ring = false }) => (
     <div style={{
       width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
-      boxShadow: ring ? '0 0 0 2px #ff4d00, 0 0 0 4px #000' : 'none',
+      boxShadow: ring ? '0 0 0 2px #ff4d00, 0 0 0 4px #0d0d0d' : 'none',
       transition: 'box-shadow 0.2s',
     }}>
-      {profilePic ? (
-        <img src={imgSrc(profilePic)} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-      ) : (
-        <div style={{
-          width: '100%', height: '100%',
-          background: 'linear-gradient(135deg, #ff4d00, #c800ff)',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: size * 0.4, fontWeight: 800, color: '#fff',
-          fontFamily: "'Syne', sans-serif",
-        }}>
-          {user?.username?.[0]?.toUpperCase()}
-        </div>
-      )}
+      {profilePic
+        ? <img src={imgSrc(profilePic)} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+        : <div style={{
+            width: '100%', height: '100%',
+            background: 'linear-gradient(135deg, #ff4d00, #c800ff)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: size * 0.4, fontWeight: 800, color: '#fff',
+            fontFamily: "'Syne', sans-serif",
+          }}>
+            {user?.username?.[0]?.toUpperCase()}
+          </div>
+      }
     </div>
   );
 
+  // Desktop nav items
   const desktopNavItems = [
     { id: 'home', icon: Home, label: 'Home' },
     { id: 'search', icon: Search, label: 'Discover' },
     { id: 'reels', icon: Film, label: 'Reels' },
     { id: 'dms', icon: MessageCircle, label: 'Messages', badge: unreadCount },
-    { id: 'notifications', icon: Bell, label: 'Notifications', badge: unreadCount },
+    { id: 'notifications', icon: Bell, label: 'Alerts', badge: unreadCount },
     { id: 'create', icon: PlusSquare, label: 'Create' },
-    { id: 'profile', icon: User, label: 'Profile' },
-    { id: 'bookmarks', icon: Bookmark, label: 'Bookmarks' },
-    { id: 'settings', icon: Settings, label: 'Settings' },
+  ];
+
+  // Mobile bottom nav items
+  const mobileNavItems = [
+    { id: 'home', icon: Home, label: 'Home' },
+    { id: 'search', icon: Compass, label: 'Discover' },
+    { id: 'dms', icon: MessageCircle, label: 'Messages', badge: unreadCount },
+    { id: 'profile', icon: null, label: 'Profile' },
   ];
 
   return (
-    <div style={{ display: 'flex', height: '100vh', background: '#000000', color: '#fff', overflow: 'hidden', fontFamily: "'Plus Jakarta Sans', 'DM Sans', sans-serif" }}>
+    <div style={{ display: 'flex', height: '100vh', background: '#0a0a0a', color: '#fff', overflow: 'hidden', fontFamily: "'DM Sans', sans-serif" }}>
 
+      {/* Google Fonts */}
       <style>{`
-        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap');
 
         * { box-sizing: border-box; }
 
-        ::-webkit-scrollbar { width: 4px; }
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 3px; }
         ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #1c1c1e; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 4px; }
 
+        /* ── Desktop sidebar ── */
         .cv-sidebar {
-          width: 260px;
+          width: 68px;
           flex-shrink: 0;
           display: flex;
           flex-direction: column;
-          padding: 24px 16px;
+          align-items: center;
+          padding: 16px 0 20px;
           position: fixed;
           top: 0; left: 0;
           height: 100vh;
           z-index: 20;
-          background: #000000;
-          border-right: 1px solid #121214;
+          background: #0d0d0d;
+          border-right: 1px solid #1a1a1a;
         }
 
+        /* ── Nav button ── */
         .cv-nav-btn {
-          width: 100%;
-          height: 48px;
-          border-radius: 12px;
+          width: 44px; height: 44px;
+          border-radius: 14px;
           background: none;
           border: none;
           cursor: pointer;
-          display: flex; 
-          align-items: center; 
-          gap: 16px;
-          padding: 0 16px;
+          display: flex; align-items: center; justify-content: center;
           position: relative;
-          transition: background 0.2s, color 0.2s;
-          color: #8e8e93;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          font-size: 15px;
-          font-weight: 500;
+          transition: background 0.15s, transform 0.15s;
+          color: #555;
         }
-        .cv-nav-btn:hover { background: #0c0c0e; color: #ffffff; }
-        .cv-nav-btn.active { background: #0c0c0e; color: #ffffff; font-weight: 600; }
+        .cv-nav-btn:hover { background: #1a1a1a; transform: scale(1.08); color: #aaa; }
+        .cv-nav-btn.active { background: #1a1a1a; color: #fff; }
+        .cv-nav-btn.active::before {
+          content: '';
+          position: absolute;
+          left: -1px; top: 50%; transform: translateY(-50%);
+          width: 3px; height: 24px;
+          background: linear-gradient(180deg, #ff4d00, #c800ff);
+          border-radius: 0 3px 3px 0;
+        }
 
-        .cv-create-btn-wide {
-          width: 100%;
-          height: 48px;
-          border-radius: 12px;
+        /* ── Create button (desktop) ── */
+        .cv-create-btn {
+          width: 44px; height: 44px;
+          border-radius: 14px;
           background: linear-gradient(135deg, #ff4d00, #c800ff);
           border: none;
           cursor: pointer;
-          display: flex; 
-          align-items: center; 
-          justify-content: center;
-          gap: 10px;
-          margin-top: 12px;
-          color: #ffffff;
-          font-family: 'Plus Jakarta Sans', sans-serif;
-          font-size: 15px;
-          font-weight: 600;
+          display: flex; align-items: center; justify-content: center;
           transition: opacity 0.2s, transform 0.15s;
-          box-shadow: 0 4px 20px rgba(255, 77, 0, 0.2);
+          box-shadow: 0 4px 16px rgba(255,77,0,0.35);
         }
-        .cv-create-btn-wide:hover { opacity: 0.95; transform: scale(1.01); }
+        .cv-create-btn:hover { opacity: 0.9; transform: scale(1.08); }
 
+        /* ── Tooltip ── */
+        .cv-tooltip {
+          position: absolute;
+          left: 56px; top: 50%; transform: translateY(-50%);
+          background: #1a1a1a;
+          border: 1px solid #2a2a2a;
+          border-radius: 8px;
+          padding: 5px 11px;
+          font-size: 12px; font-weight: 600;
+          color: #fff; white-space: nowrap;
+          pointer-events: none; z-index: 999;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+          font-family: 'DM Sans', sans-serif;
+          letter-spacing: 0.02em;
+        }
+
+        /* ── Badge ── */
         .cv-badge {
-          background: #e53e3e;
-          border-radius: 20px;
-          padding: 2px 6px;
-          font-size: 11px; 
-          font-weight: 700; 
-          color: #fff;
-          margin-left: auto;
+          position: absolute; top: 5px; right: 5px;
+          background: #ff4d00;
+          border-radius: 50%; width: 14px; height: 14px;
+          font-size: 8px; font-weight: 700; color: #fff;
+          display: flex; align-items: center; justify-content: center;
+          border: 1.5px solid #0d0d0d;
         }
 
+        /* ── Main content ── */
         .cv-main {
           flex: 1;
-          margin-left: 260px;
-          display: flex; 
-          flex-direction: column;
+          margin-left: 68px;
+          display: flex; flex-direction: column;
           overflow: hidden;
-          background: #000000;
         }
 
-        .cv-sidebar-profile {
-          margin-top: auto;
-          display: flex;
-          align-items: center;
-          gap: 12px;
-          padding: 12px;
-          border-radius: 12px;
-          cursor: pointer;
-          transition: background 0.2s;
-          width: 100%;
-          text-align: left;
-          background: transparent;
-          border: none;
-        }
-        .cv-sidebar-profile:hover { background: #0c0c0e; }
-
+        /* ── Mobile topbar ── */
         .cv-topbar {
           display: none;
           align-items: center; justify-content: space-between;
           padding: 12px 18px;
-          background: #000000;
-          border-bottom: 1px solid #121214;
+          background: #0a0a0a;
+          border-bottom: 1px solid #1a1a1a;
           flex-shrink: 0;
         }
-        .cv-topbar-logo { display: flex; align-items: center; gap: 8px; }
+        .cv-topbar-logo {
+          display: flex; align-items: center; gap: 8px;
+        }
         .cv-topbar-logo-c {
-          width: 30px; height: 30px; border-radius: 9px;
+          width: 30px; height: 30px;
+          border-radius: 9px;
           background: linear-gradient(135deg, #ff4d00, #c800ff);
           display: flex; align-items: center; justify-content: center;
-          font-family: 'Syne', sans-serif; font-size: 16px; font-weight: 900; color: #fff;
+          font-family: 'Syne', sans-serif;
+          font-size: 16px; font-weight: 900; color: #fff;
         }
-        .cv-topbar-name { font-family: 'Syne', sans-serif; font-size: 18px; font-weight: 800; color: #fff; }
+        .cv-topbar-name {
+          font-family: 'Syne', sans-serif;
+          font-size: 18px; font-weight: 800;
+          color: #fff; letter-spacing: -0.3px;
+        }
         .cv-topbar-actions { display: flex; align-items: center; gap: 14px; }
-        .cv-topbar-icon-btn { background: none; border: none; cursor: pointer; color: #888; }
+        .cv-topbar-icon-btn {
+          background: none; border: none; cursor: pointer;
+          color: #888; position: relative;
+          display: flex; align-items: center; justify-content: center;
+          transition: color 0.15s;
+        }
+        .cv-topbar-icon-btn:hover { color: #fff; }
 
+        /* ── Mobile bottom nav ── */
         .cv-bottom-nav {
           display: none;
           align-items: center;
-          background: #000000;
-          border-top: 1px solid #121214;
+          background: #0d0d0d;
+          border-top: 1px solid #1a1a1a;
           flex-shrink: 0;
-          height: 64px;
+          padding: 0 8px;
+          height: 60px;
           padding-bottom: env(safe-area-inset-bottom);
         }
         .cv-bottom-item {
-          flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px;
-          background: none; border: none; cursor: pointer; color: #4e4e52;
+          flex: 1; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; gap: 3px;
+          background: none; border: none; cursor: pointer;
+          color: #555; padding: 6px 0;
+          transition: color 0.15s;
+          position: relative;
         }
         .cv-bottom-item.active { color: #fff; }
+        .cv-bottom-item span {
+          font-size: 9px; font-weight: 600;
+          font-family: 'DM Sans', sans-serif;
+          letter-spacing: 0.04em; text-transform: uppercase;
+        }
 
-        @media (max-width: 1024px) {
+        /* ── Center create button (mobile) ── */
+        .cv-bottom-create {
+          flex: 0 0 64px; display: flex; align-items: center; justify-content: center;
+          background: none; border: none; cursor: pointer;
+        }
+        .cv-bottom-create-inner {
+          width: 48px; height: 48px; border-radius: 50%;
+          background: linear-gradient(135deg, #ff4d00, #c800ff);
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 0 0 3px #0d0d0d, 0 4px 20px rgba(255,77,0,0.4);
+          transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .cv-bottom-create-inner:hover { transform: scale(1.08); box-shadow: 0 0 0 3px #0d0d0d, 0 6px 24px rgba(255,77,0,0.55); }
+
+        /* ── Logo (desktop) ── */
+        .cv-logo {
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 24px;
+        }
+        .cv-logo-mark {
+          width: 36px; height: 36px; border-radius: 11px;
+          background: linear-gradient(135deg, #ff4d00, #c800ff);
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Syne', sans-serif;
+          font-size: 19px; font-weight: 900; color: #fff;
+          box-shadow: 0 4px 16px rgba(255,77,0,0.35);
+        }
+
+        @media (max-width: 900px) {
           .cv-sidebar { display: none !important; }
           .cv-main { margin-left: 0 !important; }
           .cv-topbar { display: flex !important; }
@@ -229,45 +309,66 @@ const Dashboard = () => {
 
       {/* ── DESKTOP SIDEBAR ── */}
       <div className="cv-sidebar">
-        <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px 28px' }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #ff4d00, #c800ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne', fontSize: 18, fontWeight: 900, color: '#fff' }}>C</div>
-          <span style={{ fontFamily: 'Syne', fontSize: 20, fontWeight: 800, letterSpacing: '-0.5px' }}>ChatVitte</span>
+        <div className="cv-logo">
+          <div className="cv-logo-mark">C</div>
         </div>
 
-        <nav style={{ display: 'flex', flexDirection: 'column', gap: 4, width: '100%' }}>
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4 }}>
           {desktopNavItems.map(({ id, icon: Icon, label, badge }) => {
             const isActive = active === id;
-            if (id === 'create') {
-              return (
-                <button key={id} className="cv-create-btn-wide" onClick={() => handleNavClick(id)}>
-                  <Icon size={18} strokeWidth={2.5} />
-                  <span>Create Post</span>
-                </button>
-              );
-            }
+            const isHovered = hoveredNav === id;
+            const isCreate = id === 'create';
             return (
-              <button key={id} className={`cv-nav-btn${isActive ? ' active' : ''}`} onClick={() => handleNavClick(id)}>
-                <Icon size={22} strokeWidth={isActive ? 2.5 : 2} color={isActive ? '#fff' : undefined} />
-                <span>{label}</span>
-                {badge > 0 && <span className="cv-badge">{badge}</span>}
-              </button>
+              <div key={id} style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
+                {isCreate ? (
+                  <button
+                    className="cv-create-btn"
+                    onClick={() => handleNavClick(id)}
+                    onMouseEnter={() => setHoveredNav(id)}
+                    onMouseLeave={() => setHoveredNav(null)}
+                  >
+                    <Icon size={20} color="#fff" strokeWidth={2.5} />
+                  </button>
+                ) : (
+                  <button
+                    className={`cv-nav-btn${isActive ? ' active' : ''}`}
+                    onClick={() => handleNavClick(id)}
+                    onMouseEnter={() => setHoveredNav(id)}
+                    onMouseLeave={() => setHoveredNav(null)}
+                  >
+                    <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                    {badge > 0 && <span className="cv-badge">{badge > 9 ? '9+' : badge}</span>}
+                  </button>
+                )}
+                {isHovered && <div className="cv-tooltip">{label}</div>}
+              </div>
             );
           })}
-        </nav>
 
-        <button className="cv-sidebar-profile" onClick={() => handleNavClick('profile')}>
-          <ProfileAvatar size={36} ring={active === 'profile'} />
-          <div style={{ display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
-            <span style={{ fontSize: '14px', fontWeight: '600', color: '#fff', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {user?.username || 'alexvibez'}
-            </span>
-            <span style={{ fontSize: '12px', color: '#666', whiteSpace: 'nowrap' }}>View profile</span>
-          </div>
-        </button>
+          {/* Profile */}
+          {(() => {
+            const isActive = active === 'profile';
+            const isHovered = hoveredNav === 'profile';
+            return (
+              <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', marginTop: 4 }}>
+                <button
+                  className={`cv-nav-btn${isActive ? ' active' : ''}`}
+                  onClick={() => handleNavClick('profile')}
+                  onMouseEnter={() => setHoveredNav('profile')}
+                  onMouseLeave={() => setHoveredNav(null)}
+                >
+                  <ProfileAvatar size={28} ring={isActive} />
+                </button>
+                {isHovered && <div className="cv-tooltip">Profile</div>}
+              </div>
+            );
+          })()}
+        </nav>
       </div>
 
       {/* ── MAIN CONTENT ── */}
       <div className="cv-main">
+
         {/* Mobile top bar */}
         <div className="cv-topbar">
           <div className="cv-topbar-logo">
@@ -275,35 +376,58 @@ const Dashboard = () => {
             <span className="cv-topbar-name">ChatVitte</span>
           </div>
           <div className="cv-topbar-actions">
-            <button className="cv-topbar-icon-btn" onClick={() => handleNavClick('search')}><Search size={22} /></button>
-            <button className="cv-topbar-icon-btn" onClick={() => handleNavClick('notifications')}><Bell size={22} /></button>
-            <button className="cv-topbar-icon-btn" onClick={() => handleNavClick('profile')}><ProfileAvatar size={28} /></button>
+            <button className="cv-topbar-icon-btn" onClick={() => handleNavClick('search')}>
+              <Search size={22} color={active === 'search' ? '#fff' : undefined} />
+            </button>
+            <button className="cv-topbar-icon-btn" style={{ position: 'relative' }} onClick={() => handleNavClick('notifications')}>
+              <Bell size={22} color={active === 'notifications' ? '#fff' : undefined} />
+              {unreadCount > 0 && (
+                <span className="cv-badge" style={{ top: -3, right: -3 }}>{unreadCount > 9 ? '9+' : unreadCount}</span>
+              )}
+            </button>
+            <button className="cv-topbar-icon-btn" onClick={() => handleNavClick('profile')}>
+              <ProfileAvatar size={30} ring={active === 'profile'} />
+            </button>
           </div>
         </div>
 
-        {/* Page Container */}
+        {/* Page */}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           {renderPage()}
         </div>
 
         {/* Mobile bottom nav */}
         <div className="cv-bottom-nav">
+          {/* Home */}
           <button className={`cv-bottom-item${active === 'home' ? ' active' : ''}`} onClick={() => handleNavClick('home')}>
-            <Home size={22} strokeWidth={2} />
+            <Home size={22} strokeWidth={active === 'home' ? 2.5 : 1.8} />
+            <span>Home</span>
           </button>
+
+          {/* Discover */}
           <button className={`cv-bottom-item${active === 'search' ? ' active' : ''}`} onClick={() => handleNavClick('search')}>
-            <Compass size={22} strokeWidth={2} />
+            <Compass size={22} strokeWidth={active === 'search' ? 2.5 : 1.8} />
+            <span>Discover</span>
           </button>
-          <button className={`cv-bottom-item${active === 'create' ? ' active' : ''}`} onClick={() => handleNavClick('create')}>
-            <div style={{ width: 44, height: 44, borderRadius: '50%', background: 'linear-gradient(135deg, #ff4d00, #c800ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 4px 12px rgba(255,77,0,0.3)' }}>
-              <PlusSquare size={20} color="#fff" strokeWidth={2.5} />
+
+          {/* Create — center pill */}
+          <div className="cv-bottom-create" onClick={() => handleNavClick('create')}>
+            <div className="cv-bottom-create-inner">
+              <PlusSquare size={22} color="#fff" strokeWidth={2.5} />
             </div>
+          </div>
+
+          {/* Messages */}
+          <button className={`cv-bottom-item${active === 'dms' ? ' active' : ''}`} onClick={() => handleNavClick('dms')} style={{ position: 'relative' }}>
+            <MessageCircle size={22} strokeWidth={active === 'dms' ? 2.5 : 1.8} />
+            {unreadCount > 0 && <span className="cv-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            <span>Messages</span>
           </button>
-          <button className={`cv-bottom-item${active === 'dms' ? ' active' : ''}`} onClick={() => handleNavClick('dms')}>
-            <MessageCircle size={22} strokeWidth={2} />
-          </button>
+
+          {/* Profile */}
           <button className={`cv-bottom-item${active === 'profile' ? ' active' : ''}`} onClick={() => handleNavClick('profile')}>
             <ProfileAvatar size={24} ring={active === 'profile'} />
+            <span>Profile</span>
           </button>
         </div>
       </div>
