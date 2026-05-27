@@ -1,622 +1,368 @@
-import React, { useState, useEffect } from "react";
-import {
-  Heart,
-  MessageCircle,
-  Send,
-  Bookmark,
-  MoreHorizontal,
-  Plus,
-} from "lucide-react";
-import { API, BACKEND_URL } from "../api";
+import React, { useState, useEffect } from 'react';
+import { Heart, MessageCircle, Send, Bookmark, MoreHorizontal, Plus, X } from 'lucide-react';
+import { API, BACKEND_URL } from '../api';
 
+// Helper to handle both Cloudinary URLs and old local URLs
 const imgSrc = (url) => {
-  if (!url) return "https://via.placeholder.com/500";
-  if (url.startsWith("http")) return url;
+  if (!url) return null;
+  if (url.startsWith('http')) return url;
   return `${BACKEND_URL}${url}`;
 };
 
-const HomeFeed = ({ token, currentUser }) => {
+const HomeFeed = ({ token, currentUser, onViewProfile }) => {
   const [posts, setPosts] = useState([]);
+  const [isPopular, setIsPopular] = useState(false);
   const [stories, setStories] = useState([]);
+  const [myStories, setMyStories] = useState([]);
+  const [commentText, setCommentText] = useState({});
+  const [showComments, setShowComments] = useState({});
+  const [comments, setComments] = useState({});
+  const [storyView, setStoryView] = useState(null);
+  const [suggested, setSuggested] = useState([]);
+  const [followingIds, setFollowingIds] = useState([]);
 
-  useEffect(() => {
-    fetchFeed();
-    fetchStories();
-  }, []);
+  useEffect(() => { fetchFeed(); fetchStories(); fetchSuggested(); }, []);
 
   const fetchFeed = async () => {
     try {
-      const res = await fetch(`${API}/posts/feed`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const res = await fetch(`${API}/posts/feed`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      setPosts(Array.isArray(data) ? data : []);
-    } catch (err) {
-      console.log(err);
-    }
+      if (Array.isArray(data) && data.length > 0) {
+        setPosts(data); setIsPopular(false);
+      } else {
+        const popRes = await fetch(`${API}/posts/popular`, { headers: { Authorization: `Bearer ${token}` } });
+        const popData = await popRes.json();
+        setPosts(Array.isArray(popData) ? popData : []);
+        setIsPopular(Array.isArray(popData) && popData.length > 0);
+      }
+    } catch (err) { console.error(err); }
   };
 
   const fetchStories = async () => {
     try {
-      const res = await fetch(`${API}/stories`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      });
-
+      const res = await fetch(`${API}/stories`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-
+      if (!Array.isArray(data)) return;
       const grouped = {};
-
-      data.forEach((s) => {
-        if (!grouped[s.user_id]) {
-          grouped[s.user_id] = {
-            user_id: s.user_id,
-            username: s.username,
-            profile_picture: s.profile_picture,
-          };
-        }
+      data.forEach(s => {
+        if (!grouped[s.user_id]) grouped[s.user_id] = { user_id: s.user_id, username: s.username, profile_picture: s.profile_picture, stories: [] };
+        grouped[s.user_id].stories.push(s);
       });
+      const all = Object.values(grouped);
+      setMyStories((all.find(g => g.user_id === currentUser?.id) || { stories: [] }).stories);
+      setStories(all.filter(g => g.user_id !== currentUser?.id));
+    } catch (err) { console.error(err); }
+  };
 
-      setStories(Object.values(grouped));
-    } catch (err) {
-      console.log(err);
-    }
+  const fetchSuggested = async () => {
+    try {
+      const [allRes, followingRes] = await Promise.all([
+        fetch(`${API}/users/all`, { headers: { Authorization: `Bearer ${token}` } }),
+        fetch(`${API}/follows/my/following`, { headers: { Authorization: `Bearer ${token}` } }),
+      ]);
+      const allUsers = await allRes.json();
+      const following = await followingRes.json();
+      const followingIdList = Array.isArray(following) ? following.map(u => Number(u.id)) : [];
+      setFollowingIds(followingIdList);
+      const notFollowed = Array.isArray(allUsers) ? allUsers.filter(u => !followingIdList.includes(Number(u.id))).slice(0, 5) : [];
+      setSuggested(notFollowed);
+    } catch (err) { console.error(err); }
+  };
+
+  const handleStory = async (e) => {
+    const f = e.target.files[0];
+    if (!f) return;
+    const formData = new FormData();
+    formData.append('media', f);
+    try {
+      await fetch(`${API}/stories`, { method: 'POST', headers: { Authorization: `Bearer ${token}` }, body: formData });
+      fetchStories();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleLike = async (postId, isLiked) => {
+    try {
+      await fetch(`${API}/likes/${postId}`, { method: isLiked ? 'DELETE' : 'POST', headers: { Authorization: `Bearer ${token}` } });
+      fetchFeed();
+    } catch (err) { console.error(err); }
+  };
+
+  const fetchComments = async (postId) => {
+    try {
+      const res = await fetch(`${API}/comments/${postId}`, { headers: { Authorization: `Bearer ${token}` } });
+      const data = await res.json();
+      setComments(prev => ({ ...prev, [postId]: Array.isArray(data) ? data : [] }));
+    } catch (err) { console.error(err); }
+  };
+
+  const handleComment = async (postId) => {
+    if (!commentText[postId]?.trim()) return;
+    try {
+      await fetch(`${API}/comments/${postId}`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ content: commentText[postId] })
+      });
+      setCommentText(prev => ({ ...prev, [postId]: '' }));
+      fetchComments(postId); fetchFeed();
+    } catch (err) { console.error(err); }
+  };
+
+  const handleFollow = async (userId) => {
+    try {
+      await fetch(`${API}/follows/${userId}`, { method: 'POST', headers: { Authorization: `Bearer ${token}` } });
+      setFollowingIds(prev => [...prev, userId]);
+      setSuggested(prev => prev.filter(u => u.id !== userId));
+    } catch (err) { console.error(err); }
   };
 
   const formatTime = (dateStr) => {
     const diff = Date.now() - new Date(dateStr);
-
-    if (diff < 3600000) {
-      return `${Math.floor(diff / 60000)}m`;
-    }
-
-    if (diff < 86400000) {
-      return `${Math.floor(diff / 3600000)}h`;
-    }
-
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h`;
     return `${Math.floor(diff / 86400000)}d`;
   };
 
+  const currentStory = storyView ? storyView.group.stories[storyView.index] : null;
+
   return (
-    <div
-      style={{
-        minHeight: "100vh",
-        background:
-          "radial-gradient(circle at top left,#1a0826,#050505 40%)",
-        color: "#fff",
-        display: "flex",
-        justifyContent: "center",
-        padding: "20px",
-      }}
-    >
-      <div
-        style={{
-          width: "100%",
-          maxWidth: "1400px",
-          display: "grid",
-          gridTemplateColumns: "240px 1fr 320px",
-          gap: "24px",
-        }}
-      >
-        {/* LEFT */}
-        <div
-          className="left-sidebar"
-          style={{
-            position: "sticky",
-            top: 20,
-            height: "fit-content",
-            background: "rgba(255,255,255,0.03)",
-            border: "1px solid rgba(255,255,255,0.06)",
-            borderRadius: "28px",
-            padding: "24px",
-            backdropFilter: "blur(20px)",
-          }}
-        >
-          <h1
-            style={{
-              fontSize: 28,
-              fontWeight: 800,
-              marginBottom: 40,
-              background:
-                "linear-gradient(90deg,#a855f7,#ec4899,#ef4444)",
-              WebkitBackgroundClip: "text",
-              WebkitTextFillColor: "transparent",
-            }}
-          >
-            ChatVitte
-          </h1>
+    <div style={{ display: 'flex', justifyContent: 'center', background: '#000', minHeight: '100%' }}>
+      <div style={{ width: '100%', maxWidth: 470, paddingBottom: 40 }}>
 
-          {[
-            "Home",
-            "Discover",
-            "Messages",
-            "Profile",
-            "Bookmarks",
-            "Settings",
-          ].map((item) => (
-            <div
-              key={item}
-              style={{
-                padding: "14px 18px",
-                borderRadius: "18px",
-                marginBottom: 10,
-                background:
-                  item === "Home"
-                    ? "rgba(168,85,247,0.15)"
-                    : "transparent",
-                cursor: "pointer",
-                fontWeight: item === "Home" ? 700 : 500,
-              }}
-            >
-              {item}
-            </div>
-          ))}
-        </div>
-
-        {/* CENTER */}
-        <div>
-          {/* GREETING */}
-          <div style={{ marginBottom: 30 }}>
-            <h1
-              style={{
-                fontSize: 38,
-                marginBottom: 8,
-                lineHeight: 1.1,
-              }}
-            >
-              Welcome back,
-              <span
-                style={{
-                  background:
-                    "linear-gradient(90deg,#a855f7,#ec4899,#ef4444)",
-                  WebkitBackgroundClip: "text",
-                  WebkitTextFillColor: "transparent",
-                }}
-              >
-                {" "}
-                {currentUser?.username}
-              </span>
-            </h1>
-
-            <p
-              style={{
-                color: "#9ca3af",
-              }}
-            >
-              Discover creators, vibes and underground culture.
-            </p>
-          </div>
-
-          {/* STORIES */}
-          <div
-            style={{
-              display: "flex",
-              gap: 18,
-              overflowX: "auto",
-              marginBottom: 30,
-              paddingBottom: 10,
-            }}
-          >
-            {/* YOUR STORY */}
-            <div
-              style={{
-                flexShrink: 0,
-                textAlign: "center",
-              }}
-            >
-              <div
-                style={{
-                  width: 80,
-                  height: 80,
-                  borderRadius: "50%",
-                  padding: 3,
-                  background:
-                    "linear-gradient(135deg,#a855f7,#ec4899,#ef4444)",
-                }}
-              >
-                <img
-                  src={imgSrc(currentUser?.profile_picture)}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    height: "100%",
-                    borderRadius: "50%",
-                    objectFit: "cover",
-                    border: "3px solid #000",
-                  }}
-                />
+        {/* Story Viewer */}
+        {storyView && currentStory && (
+          <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+            <div style={{ position: 'relative', width: '100%', maxWidth: 400, height: '100vh' }}>
+              <div style={{ position: 'absolute', top: 12, left: 12, right: 12, display: 'flex', gap: 4, zIndex: 10 }}>
+                {storyView.group.stories.map((_, i) => (
+                  <div key={i} style={{ flex: 1, height: 2, borderRadius: 99, background: i <= storyView.index ? '#fff' : 'rgba(255,255,255,0.3)' }} />
+                ))}
               </div>
-
-              <div
-                style={{
-                  marginTop: 8,
-                  fontSize: 13,
-                  color: "#9ca3af",
-                }}
-              >
-                Your Story
-              </div>
-            </div>
-
-            {/* OTHERS */}
-            {stories.map((story) => (
-              <div
-                key={story.user_id}
-                style={{
-                  flexShrink: 0,
-                  textAlign: "center",
-                }}
-              >
-                <div
-                  style={{
-                    width: 80,
-                    height: 80,
-                    borderRadius: "50%",
-                    padding: 3,
-                    background:
-                      "linear-gradient(135deg,#a855f7,#ec4899,#ef4444)",
-                  }}
-                >
-                  <img
-                    src={imgSrc(story.profile_picture)}
-                    alt=""
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                      border: "3px solid #000",
-                    }}
-                  />
+              <div style={{ position: 'absolute', top: 28, left: 16, right: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 14, border: '2px solid #fff' }}>
+                    {storyView.group.profile_picture
+                      ? <img src={imgSrc(storyView.group.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                      : storyView.group.username?.[0]?.toUpperCase()
+                    }
+                  </div>
+                  <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{storyView.group.username}</span>
                 </div>
-
-                <div
-                  style={{
-                    marginTop: 8,
-                    fontSize: 13,
-                    color: "#9ca3af",
-                    maxWidth: 90,
-                    overflow: "hidden",
-                    textOverflow: "ellipsis",
-                    whiteSpace: "nowrap",
-                  }}
-                >
-                  {story.username}
-                </div>
+                <button onClick={() => setStoryView(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
+                  <X size={24} color="#fff" />
+                </button>
               </div>
-            ))}
-          </div>
-
-          {/* CREATE POST */}
-          <div
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: "28px",
-              padding: 20,
-              marginBottom: 30,
-              backdropFilter: "blur(20px)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                gap: 14,
-                alignItems: "center",
-              }}
-            >
-              <img
-                src={imgSrc(currentUser?.profile_picture)}
-                alt=""
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                }}
-              />
-
-              <button
-                style={{
-                  flex: 1,
-                  height: 52,
-                  borderRadius: 999,
-                  border: "none",
-                  background: "#111",
-                  color: "#71717a",
-                  textAlign: "left",
-                  padding: "0 22px",
-                  fontSize: 15,
-                  cursor: "pointer",
-                }}
-              >
-                Share your vibe today...
-              </button>
-
-              <button
-                style={{
-                  width: 52,
-                  height: 52,
-                  borderRadius: "50%",
-                  border: "none",
-                  background:
-                    "linear-gradient(135deg,#a855f7,#ec4899)",
-                  color: "#fff",
-                  cursor: "pointer",
-                }}
-              >
-                <Plus size={22} />
-              </button>
+              {currentStory.media_type === 'video'
+                ? <video src={imgSrc(currentStory.media_url)} autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <img src={imgSrc(currentStory.media_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+              }
+              <button style={{ position: 'absolute', left: 0, top: 0, width: '50%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', zIndex: 20 }}
+                onClick={() => storyView.index > 0 ? setStoryView({ ...storyView, index: storyView.index - 1 }) : setStoryView(null)} />
+              <button style={{ position: 'absolute', right: 0, top: 0, width: '50%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', zIndex: 20 }}
+                onClick={() => storyView.index < storyView.group.stories.length - 1 ? setStoryView({ ...storyView, index: storyView.index + 1 }) : setStoryView(null)} />
             </div>
           </div>
+        )}
 
-          {/* POSTS */}
-          {posts.map((post) => (
-            <div
-              key={post.id}
-              style={{
-                background: "rgba(255,255,255,0.04)",
-                border: "1px solid rgba(255,255,255,0.06)",
-                borderRadius: 32,
-                padding: 18,
-                marginBottom: 30,
-                backdropFilter: "blur(20px)",
-              }}
-            >
-              {/* HEADER */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  alignItems: "center",
-                  marginBottom: 16,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 12,
-                    alignItems: "center",
-                  }}
-                >
-                  <img
-                    src={imgSrc(post.profile_picture)}
-                    alt=""
-                    style={{
-                      width: 50,
-                      height: 50,
-                      borderRadius: "50%",
-                      objectFit: "cover",
-                    }}
-                  />
-
-                  <div>
-                    <div
-                      style={{
-                        fontWeight: 700,
-                        fontSize: 15,
-                      }}
-                    >
-                      {post.username}
+        {/* Stories Bar */}
+        <div style={{ display: 'flex', gap: 12, padding: '12px 16px', overflowX: 'auto', borderBottom: '1px solid #27272a' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, position: 'relative' }}>
+            {myStories.length > 0 ? (
+              <>
+                <button onClick={() => setStoryView({ group: { user_id: currentUser?.id, username: currentUser?.username, profile_picture: currentUser?.profile_picture, stories: myStories }, index: 0 })}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                  <div style={{ width: 66, height: 66, borderRadius: '50%', padding: 2, background: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)' }}>
+                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', padding: 2, background: '#000' }}>
+                      <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden' }}>
+                        {myStories[0].media_type === 'image'
+                          ? <img src={imgSrc(myStories[0].media_url)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                          : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 20 }}>{currentUser?.username?.[0]?.toUpperCase()}</div>
+                        }
+                      </div>
                     </div>
-
-                    <div
-                      style={{
-                        color: "#71717a",
-                        fontSize: 13,
-                      }}
-                    >
-                      {formatTime(post.created_at)}
+                  </div>
+                </button>
+                <label style={{ position: 'absolute', bottom: 22, right: 0, width: 20, height: 20, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #000', cursor: 'pointer' }}>
+                  <Plus size={10} color="#fff" />
+                  <input type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleStory} />
+                </label>
+              </>
+            ) : (
+              <label style={{ cursor: 'pointer' }}>
+                <div style={{ width: 66, height: 66, borderRadius: '50%', padding: 2, background: '#3f3f46' }}>
+                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', padding: 2, background: '#000' }}>
+                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 'bold', position: 'relative', overflow: 'hidden' }}>
+                      {currentUser?.profile_picture
+                        ? <img src={imgSrc(currentUser.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                        : currentUser?.username?.[0]?.toUpperCase()
+                      }
+                      <div style={{ position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #000' }}>
+                        <Plus size={10} color="#fff" />
+                      </div>
                     </div>
                   </div>
                 </div>
+                <input type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleStory} />
+              </label>
+            )}
+            <span style={{ fontSize: 10, color: '#a1a1aa' }}>Your story</span>
+          </div>
 
-                <MoreHorizontal color="#9ca3af" />
-              </div>
-
-              {/* IMAGE */}
-              <div
-                style={{
-                  overflow: "hidden",
-                  borderRadius: 28,
-                }}
-              >
-                <img
-                  src={imgSrc(post.media_url)}
-                  alt=""
-                  style={{
-                    width: "100%",
-                    maxHeight: 700,
-                    objectFit: "cover",
-                    display: "block",
-                  }}
-                />
-              </div>
-
-              {/* ACTIONS */}
-              <div
-                style={{
-                  display: "flex",
-                  justifyContent: "space-between",
-                  marginTop: 18,
-                }}
-              >
-                <div
-                  style={{
-                    display: "flex",
-                    gap: 18,
-                  }}
-                >
-                  <Heart />
-                  <MessageCircle />
-                  <Send />
+          {stories.map(group => (
+            <div key={group.user_id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
+              <button onClick={() => setStoryView({ group, index: 0 })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <div style={{ width: 66, height: 66, borderRadius: '50%', padding: 2, background: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)' }}>
+                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', padding: 2, background: '#000' }}>
+                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3f3f46', fontWeight: 'bold', fontSize: 20 }}>
+                      {group.profile_picture
+                        ? <img src={imgSrc(group.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                        : group.username?.[0]?.toUpperCase()
+                      }
+                    </div>
+                  </div>
                 </div>
-
-                <Bookmark />
-              </div>
-
-              {/* CAPTION */}
-              <div style={{ marginTop: 16 }}>
-                <div
-                  style={{
-                    fontWeight: 700,
-                    marginBottom: 8,
-                  }}
-                >
-                  {Number(post.likes_count || 0).toLocaleString()} vibes
-                </div>
-
-                <div
-                  style={{
-                    color: "#d4d4d8",
-                    lineHeight: 1.6,
-                  }}
-                >
-                  <span
-                    style={{
-                      fontWeight: 700,
-                      color: "#fff",
-                      marginRight: 6,
-                    }}
-                  >
-                    {post.username}
-                  </span>
-
-                  {post.caption}
-                </div>
-              </div>
+              </button>
+              <span style={{ fontSize: 10, color: '#a1a1aa', maxWidth: 66, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.username}</span>
             </div>
           ))}
         </div>
 
-        {/* RIGHT */}
-        <div
-          className="right-sidebar"
-          style={{
-            position: "sticky",
-            top: 20,
-            height: "fit-content",
-          }}
-        >
-          {/* PROFILE */}
-          <div
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: 30,
-              padding: 22,
-              marginBottom: 24,
-              backdropFilter: "blur(20px)",
-            }}
-          >
-            <div
-              style={{
-                display: "flex",
-                gap: 14,
-                alignItems: "center",
-              }}
-            >
-              <img
-                src={imgSrc(currentUser?.profile_picture)}
-                alt=""
-                style={{
-                  width: 62,
-                  height: 62,
-                  borderRadius: "50%",
-                  objectFit: "cover",
-                }}
-              />
+        {isPopular && posts.length > 0 && (
+          <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+            <div style={{ flex: 1, height: 1, background: '#27272a' }} />
+            <span style={{ fontSize: 12, color: '#71717a', fontWeight: 600, whiteSpace: 'nowrap' }}>✨ Suggested for you</span>
+            <div style={{ flex: 1, height: 1, background: '#27272a' }} />
+          </div>
+        )}
 
-              <div>
-                <div
-                  style={{
-                    fontWeight: 700,
-                    fontSize: 17,
-                  }}
-                >
-                  {currentUser?.username}
-                </div>
+        {posts.length === 0 && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: '#52525b', gap: 12 }}>
+            <MessageCircle size={48} />
+            <p style={{ fontSize: 14, textAlign: 'center' }}>No posts yet.<br />Be the first to post!</p>
+          </div>
+        )}
 
-                <div
-                  style={{
-                    color: "#9ca3af",
-                    fontSize: 13,
-                  }}
-                >
-                  Creative Explorer
+        {posts.map(post => (
+          <div key={post.id} style={{ borderBottom: '1px solid #27272a' }}>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
+              <button onClick={() => onViewProfile && onViewProfile(post.user_id)}
+                style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 'bold', flexShrink: 0 }}>
+                  {post.profile_picture
+                    ? <img src={imgSrc(post.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                    : post.username?.[0]?.toUpperCase()
+                  }
                 </div>
+                <div style={{ textAlign: 'left' }}>
+                  <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: '#fff' }}>{post.username}</p>
+                  <p style={{ fontSize: 10, color: '#71717a', margin: 0 }}>{formatTime(post.created_at)}</p>
+                </div>
+              </button>
+              <MoreHorizontal size={20} color="#71717a" />
+            </div>
+
+            <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: '#18181b', overflow: 'hidden' }}>
+              {post.media_type === 'video'
+                ? <video src={imgSrc(post.media_url)} controls style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+                : <img src={imgSrc(post.media_url)} alt="post" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
+              }
+            </div>
+
+            <div style={{ padding: '10px 12px 8px' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <button onClick={() => handleLike(post.id, post.is_liked)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <Heart size={26} fill={post.is_liked ? '#ef4444' : 'none'} color={post.is_liked ? '#ef4444' : '#fff'} />
+                  </button>
+                  <button onClick={() => { setShowComments(p => ({ ...p, [post.id]: !p[post.id] })); fetchComments(post.id); }}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
+                    <MessageCircle size={26} color="#fff" />
+                  </button>
+                  <Send size={24} color="#fff" />
+                </div>
+                <Bookmark size={24} color="#fff" />
+              </div>
+              <p style={{ fontSize: 14, fontWeight: 'bold', margin: '0 0 4px' }}>{Number(post.likes_count || 0).toLocaleString()} likes</p>
+              {post.caption && (
+                <p style={{ fontSize: 14, margin: '0 0 4px', color: '#fff' }}>
+                  <span style={{ fontWeight: 600, marginRight: 4 }}>{post.username}</span>{post.caption}
+                </p>
+              )}
+              {post.comments_count > 0 && (
+                <button onClick={() => { setShowComments(p => ({ ...p, [post.id]: !p[post.id] })); fetchComments(post.id); }}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', fontSize: 12, padding: 0, marginBottom: 4, display: 'block' }}>
+                  View all {post.comments_count} comments
+                </button>
+              )}
+              {showComments[post.id] && (
+                <div style={{ marginBottom: 8 }}>
+                  {(comments[post.id] || []).map(c => (
+                    <p key={c.id} style={{ fontSize: 14, margin: '2px 0', color: '#fff' }}>
+                      <span style={{ fontWeight: 600, marginRight: 4 }}>{c.username}</span>{c.content}
+                    </p>
+                  ))}
+                </div>
+              )}
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid #27272a', paddingTop: 8 }}>
+                <div style={{ width: 24, height: 24, borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 'bold', flexShrink: 0 }}>
+                  {currentUser?.profile_picture
+                    ? <img src={imgSrc(currentUser.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                    : currentUser?.username?.[0]?.toUpperCase()
+                  }
+                </div>
+                <input type="text" placeholder="Add a comment..."
+                  value={commentText[post.id] || ''}
+                  onChange={(e) => setCommentText(p => ({ ...p, [post.id]: e.target.value }))}
+                  onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
+                  style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: 13 }}
+                />
+                {commentText[post.id] && (
+                  <button onClick={() => handleComment(post.id)}
+                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: 12, fontWeight: 'bold' }}>
+                    Post
+                  </button>
+                )}
               </div>
             </div>
           </div>
-
-          {/* TRENDING */}
-          <div
-            style={{
-              background: "rgba(255,255,255,0.04)",
-              border: "1px solid rgba(255,255,255,0.06)",
-              borderRadius: 30,
-              padding: 22,
-              backdropFilter: "blur(20px)",
-            }}
-          >
-            <h3
-              style={{
-                marginBottom: 20,
-                fontSize: 18,
-              }}
-            >
-              Trending Spaces
-            </h3>
-
-            {["Streetwear", "Music", "Design", "Creators"].map(
-              (item) => (
-                <div
-                  key={item}
-                  style={{
-                    padding: 16,
-                    borderRadius: 18,
-                    background: "#0f0f0f",
-                    marginBottom: 12,
-                    cursor: "pointer",
-                  }}
-                >
-                  #{item}
-                </div>
-              )
-            )}
-          </div>
-        </div>
+        ))}
       </div>
 
-      {/* MOBILE */}
+      {/* RIGHT SIDEBAR */}
+      <div className="right-sidebar" style={{ width: 280, flexShrink: 0, padding: '32px 0 24px 24px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
+        {suggested.length > 0 && (
+          <>
+            <p style={{ fontSize: 13, fontWeight: 700, color: '#71717a', margin: '0 0 16px' }}>Suggested for you</p>
+            {suggested.map(u => (
+              <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
+                <button onClick={() => onViewProfile && onViewProfile(u.id)}
+                  style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flex: 1, minWidth: 0 }}>
+                  <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: '#fff' }}>
+                    {u.profile_picture
+                      ? <img src={imgSrc(u.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
+                      : u.username?.[0]?.toUpperCase()
+                    }
+                  </div>
+                  <div style={{ minWidth: 0, textAlign: 'left' }}>
+                    <p style={{ fontSize: 13, fontWeight: 600, margin: 0, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</p>
+                    <p style={{ fontSize: 11, color: '#71717a', margin: 0 }}>Suggested for you</p>
+                  </div>
+                </button>
+                <button onClick={() => handleFollow(u.id)}
+                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: 12, fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>
+                  Follow
+                </button>
+              </div>
+            ))}
+          </>
+        )}
+      </div>
+
       <style>{`
-        @media(max-width:1100px){
-          .right-sidebar{
-            display:none;
-          }
-        }
-
-        @media(max-width:850px){
-          .left-sidebar{
-            display:none;
-          }
-        }
-
-        @media(max-width:850px){
-          div[style*="grid-template-columns"]{
-            grid-template-columns:1fr !important;
-          }
-        }
-
-        @media(max-width:600px){
-          h1{
-            font-size:28px !important;
-          }
-        }
+        @media (max-width: 1100px) { .right-sidebar { display: none !important; } }
+        ::-webkit-scrollbar { width: 4px; }
+        ::-webkit-scrollbar-track { background: #000; }
+        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
       `}</style>
     </div>
   );
