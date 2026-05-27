@@ -474,10 +474,24 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
             <p style={{ margin: '4px 0 0', fontSize: 12 }}>Be the first to post!</p>
           </div>
         )}
-
-       <PostCard
-  key={post.id}
-  post={post}
+{posts.map((post) => (
+  <PostCard
+    key={post.id}
+    post={post}
+    currentUser={currentUser}
+    comments={comments}
+    commentText={commentText}
+    showComments={showComments}
+    onViewProfile={onViewProfile}
+    handleLike={handleLike}
+    handleComment={handleComment}
+    fetchComments={fetchComments}
+    setCommentText={setCommentText}
+    setShowComments={setShowComments}
+    formatTime={formatTime}
+    imgSrc={imgSrc}
+  />
+))}
   currentUser={currentUser}
   comments={comments}
   commentText={commentText}
