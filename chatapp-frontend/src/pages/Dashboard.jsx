@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Home, Search, PlusSquare, Film, MessageCircle, Bell } from 'lucide-react';
+import { Home, Search, PlusSquare, Film, MessageCircle, Bell, Compass } from 'lucide-react';
 import HomeFeed from './HomeFeed';
 import SearchPage from './SearchPage';
 import Reels from './Reels';
@@ -72,168 +72,365 @@ const Dashboard = () => {
     }
   };
 
-  const navItems = [
-    { id: 'home', icon: Home, label: 'Home', filled: true },
-    { id: 'search', icon: Search, label: 'Search', filled: false },
-    { id: 'reels', icon: Film, label: 'Reels', filled: true },
-    { id: 'dms', icon: MessageCircle, label: 'Messages', filled: true, badge: unreadCount },
-    { id: 'notifications', icon: Bell, label: 'Notifications', filled: false, badge: unreadCount },
-    { id: 'create', icon: PlusSquare, label: 'Create', filled: false },
-  ];
-
-  const Tooltip = ({ label }) => (
-    <div style={{
-      position: 'absolute', left: 58, top: '50%', transform: 'translateY(-50%)',
-      background: '#18181b', border: '1px solid #27272a', borderRadius: 8,
-      padding: '6px 12px', fontSize: 13, fontWeight: 600, color: '#fff',
-      whiteSpace: 'nowrap', zIndex: 999, pointerEvents: 'none',
-      boxShadow: '0 4px 12px rgba(0,0,0,0.6)',
-    }}>
-      {label}
-    </div>
-  );
-
   const ProfileAvatar = ({ size = 28, ring = false }) => (
     <div style={{
-      width: size, height: size, borderRadius: '50%', overflow: 'hidden',
-      boxShadow: ring ? '0 0 0 2px #fff' : 'none', flexShrink: 0,
+      width: size, height: size, borderRadius: '50%', overflow: 'hidden', flexShrink: 0,
+      boxShadow: ring ? '0 0 0 2px #ff4d00, 0 0 0 4px #0d0d0d' : 'none',
+      transition: 'box-shadow 0.2s',
     }}>
       {profilePic
         ? <img src={imgSrc(profilePic)} alt="me" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-        : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: size * 0.4, fontWeight: 700, color: '#fff' }}>
+        : <div style={{
+            width: '100%', height: '100%',
+            background: 'linear-gradient(135deg, #ff4d00, #c800ff)',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            fontSize: size * 0.4, fontWeight: 800, color: '#fff',
+            fontFamily: "'Syne', sans-serif",
+          }}>
             {user?.username?.[0]?.toUpperCase()}
           </div>
       }
     </div>
   );
 
-  return (
-    <div style={{ display: 'flex', height: '100vh', background: '#000', color: '#fff', overflow: 'hidden' }}>
+  // Desktop nav items
+  const desktopNavItems = [
+    { id: 'home', icon: Home, label: 'Home' },
+    { id: 'search', icon: Search, label: 'Discover' },
+    { id: 'reels', icon: Film, label: 'Reels' },
+    { id: 'dms', icon: MessageCircle, label: 'Messages', badge: unreadCount },
+    { id: 'notifications', icon: Bell, label: 'Alerts', badge: unreadCount },
+    { id: 'create', icon: PlusSquare, label: 'Create' },
+  ];
 
-      {/* LEFT SIDEBAR */}
-      <div className="sidebar-desktop" style={{
-        width: 72, flexShrink: 0, borderRight: '1px solid #27272a',
-        display: 'flex', flexDirection: 'column', alignItems: 'center',
-        padding: '12px 0', position: 'fixed', top: 0, left: 0,
-        height: '100vh', zIndex: 20, background: '#000',
-      }}>
-        {/* Logo */}
-        <div style={{ marginBottom: 20, height: 48, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <span style={{ fontSize: 26, fontWeight: 900, fontStyle: 'italic', background: 'linear-gradient(to right,#ec4899,#ef4444,#eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>C</span>
+  // Mobile bottom nav items
+  const mobileNavItems = [
+    { id: 'home', icon: Home, label: 'Home' },
+    { id: 'search', icon: Compass, label: 'Discover' },
+    { id: 'dms', icon: MessageCircle, label: 'Messages', badge: unreadCount },
+    { id: 'profile', icon: null, label: 'Profile' },
+  ];
+
+  return (
+    <div style={{ display: 'flex', height: '100vh', background: '#0a0a0a', color: '#fff', overflow: 'hidden', fontFamily: "'DM Sans', sans-serif" }}>
+
+      {/* Google Fonts */}
+      <style>{`
+        @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800;900&family=DM+Sans:wght@300;400;500;600&display=swap');
+
+        * { box-sizing: border-box; }
+
+        /* ── Scrollbar ── */
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #2a2a2a; border-radius: 4px; }
+
+        /* ── Desktop sidebar ── */
+        .cv-sidebar {
+          width: 68px;
+          flex-shrink: 0;
+          display: flex;
+          flex-direction: column;
+          align-items: center;
+          padding: 16px 0 20px;
+          position: fixed;
+          top: 0; left: 0;
+          height: 100vh;
+          z-index: 20;
+          background: #0d0d0d;
+          border-right: 1px solid #1a1a1a;
+        }
+
+        /* ── Nav button ── */
+        .cv-nav-btn {
+          width: 44px; height: 44px;
+          border-radius: 14px;
+          background: none;
+          border: none;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          position: relative;
+          transition: background 0.15s, transform 0.15s;
+          color: #555;
+        }
+        .cv-nav-btn:hover { background: #1a1a1a; transform: scale(1.08); color: #aaa; }
+        .cv-nav-btn.active { background: #1a1a1a; color: #fff; }
+        .cv-nav-btn.active::before {
+          content: '';
+          position: absolute;
+          left: -1px; top: 50%; transform: translateY(-50%);
+          width: 3px; height: 24px;
+          background: linear-gradient(180deg, #ff4d00, #c800ff);
+          border-radius: 0 3px 3px 0;
+        }
+
+        /* ── Create button (desktop) ── */
+        .cv-create-btn {
+          width: 44px; height: 44px;
+          border-radius: 14px;
+          background: linear-gradient(135deg, #ff4d00, #c800ff);
+          border: none;
+          cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+          transition: opacity 0.2s, transform 0.15s;
+          box-shadow: 0 4px 16px rgba(255,77,0,0.35);
+        }
+        .cv-create-btn:hover { opacity: 0.9; transform: scale(1.08); }
+
+        /* ── Tooltip ── */
+        .cv-tooltip {
+          position: absolute;
+          left: 56px; top: 50%; transform: translateY(-50%);
+          background: #1a1a1a;
+          border: 1px solid #2a2a2a;
+          border-radius: 8px;
+          padding: 5px 11px;
+          font-size: 12px; font-weight: 600;
+          color: #fff; white-space: nowrap;
+          pointer-events: none; z-index: 999;
+          box-shadow: 0 4px 16px rgba(0,0,0,0.6);
+          font-family: 'DM Sans', sans-serif;
+          letter-spacing: 0.02em;
+        }
+
+        /* ── Badge ── */
+        .cv-badge {
+          position: absolute; top: 5px; right: 5px;
+          background: #ff4d00;
+          border-radius: 50%; width: 14px; height: 14px;
+          font-size: 8px; font-weight: 700; color: #fff;
+          display: flex; align-items: center; justify-content: center;
+          border: 1.5px solid #0d0d0d;
+        }
+
+        /* ── Main content ── */
+        .cv-main {
+          flex: 1;
+          margin-left: 68px;
+          display: flex; flex-direction: column;
+          overflow: hidden;
+        }
+
+        /* ── Mobile topbar ── */
+        .cv-topbar {
+          display: none;
+          align-items: center; justify-content: space-between;
+          padding: 12px 18px;
+          background: #0a0a0a;
+          border-bottom: 1px solid #1a1a1a;
+          flex-shrink: 0;
+        }
+        .cv-topbar-logo {
+          display: flex; align-items: center; gap: 8px;
+        }
+        .cv-topbar-logo-c {
+          width: 30px; height: 30px;
+          border-radius: 9px;
+          background: linear-gradient(135deg, #ff4d00, #c800ff);
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Syne', sans-serif;
+          font-size: 16px; font-weight: 900; color: #fff;
+        }
+        .cv-topbar-name {
+          font-family: 'Syne', sans-serif;
+          font-size: 18px; font-weight: 800;
+          color: #fff; letter-spacing: -0.3px;
+        }
+        .cv-topbar-actions { display: flex; align-items: center; gap: 14px; }
+        .cv-topbar-icon-btn {
+          background: none; border: none; cursor: pointer;
+          color: #888; position: relative;
+          display: flex; align-items: center; justify-content: center;
+          transition: color 0.15s;
+        }
+        .cv-topbar-icon-btn:hover { color: #fff; }
+
+        /* ── Mobile bottom nav ── */
+        .cv-bottom-nav {
+          display: none;
+          align-items: center;
+          background: #0d0d0d;
+          border-top: 1px solid #1a1a1a;
+          flex-shrink: 0;
+          padding: 0 8px;
+          height: 60px;
+          padding-bottom: env(safe-area-inset-bottom);
+        }
+        .cv-bottom-item {
+          flex: 1; display: flex; flex-direction: column;
+          align-items: center; justify-content: center; gap: 3px;
+          background: none; border: none; cursor: pointer;
+          color: #555; padding: 6px 0;
+          transition: color 0.15s;
+          position: relative;
+        }
+        .cv-bottom-item.active { color: #fff; }
+        .cv-bottom-item span {
+          font-size: 9px; font-weight: 600;
+          font-family: 'DM Sans', sans-serif;
+          letter-spacing: 0.04em; text-transform: uppercase;
+        }
+
+        /* ── Center create button (mobile) ── */
+        .cv-bottom-create {
+          flex: 0 0 64px; display: flex; align-items: center; justify-content: center;
+          background: none; border: none; cursor: pointer;
+        }
+        .cv-bottom-create-inner {
+          width: 48px; height: 48px; border-radius: 50%;
+          background: linear-gradient(135deg, #ff4d00, #c800ff);
+          display: flex; align-items: center; justify-content: center;
+          box-shadow: 0 0 0 3px #0d0d0d, 0 4px 20px rgba(255,77,0,0.4);
+          transition: transform 0.15s, box-shadow 0.15s;
+        }
+        .cv-bottom-create-inner:hover { transform: scale(1.08); box-shadow: 0 0 0 3px #0d0d0d, 0 6px 24px rgba(255,77,0,0.55); }
+
+        /* ── Logo (desktop) ── */
+        .cv-logo {
+          display: flex; align-items: center; justify-content: center;
+          margin-bottom: 24px;
+        }
+        .cv-logo-mark {
+          width: 36px; height: 36px; border-radius: 11px;
+          background: linear-gradient(135deg, #ff4d00, #c800ff);
+          display: flex; align-items: center; justify-content: center;
+          font-family: 'Syne', sans-serif;
+          font-size: 19px; font-weight: 900; color: #fff;
+          box-shadow: 0 4px 16px rgba(255,77,0,0.35);
+        }
+
+        @media (max-width: 900px) {
+          .cv-sidebar { display: none !important; }
+          .cv-main { margin-left: 0 !important; }
+          .cv-topbar { display: flex !important; }
+          .cv-bottom-nav { display: flex !important; }
+        }
+      `}</style>
+
+      {/* ── DESKTOP SIDEBAR ── */}
+      <div className="cv-sidebar">
+        <div className="cv-logo">
+          <div className="cv-logo-mark">C</div>
         </div>
 
-        {/* Nav items */}
-        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, width: '100%' }}>
-          {navItems.map(({ id, icon: Icon, label, filled, badge }) => {
+        <nav style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 6, width: '100%', paddingTop: 4 }}>
+          {desktopNavItems.map(({ id, icon: Icon, label, badge }) => {
             const isActive = active === id;
             const isHovered = hoveredNav === id;
+            const isCreate = id === 'create';
             return (
               <div key={id} style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
-                <button onClick={() => handleNavClick(id)}
-                  onMouseEnter={() => setHoveredNav(id)}
-                  onMouseLeave={() => setHoveredNav(null)}
-                  style={{ width: 48, height: 48, borderRadius: 12, background: isActive ? '#18181b' : isHovered ? '#111' : 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s', position: 'relative' }}>
-                  <Icon size={26} fill={isActive && filled ? '#fff' : 'none'} color={isActive ? '#fff' : '#a1a1aa'} strokeWidth={isActive ? 2.5 : 2} />
-                  {badge > 0 && (
-                    <span style={{ position: 'absolute', top: 6, right: 6, background: '#ef4444', borderRadius: '50%', width: 14, height: 14, fontSize: 8, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      {badge > 9 ? '9+' : badge}
-                    </span>
-                  )}
-                </button>
-                {isHovered && <Tooltip label={label} />}
+                {isCreate ? (
+                  <button
+                    className="cv-create-btn"
+                    onClick={() => handleNavClick(id)}
+                    onMouseEnter={() => setHoveredNav(id)}
+                    onMouseLeave={() => setHoveredNav(null)}
+                  >
+                    <Icon size={20} color="#fff" strokeWidth={2.5} />
+                  </button>
+                ) : (
+                  <button
+                    className={`cv-nav-btn${isActive ? ' active' : ''}`}
+                    onClick={() => handleNavClick(id)}
+                    onMouseEnter={() => setHoveredNav(id)}
+                    onMouseLeave={() => setHoveredNav(null)}
+                  >
+                    <Icon size={22} strokeWidth={isActive ? 2.5 : 1.8} />
+                    {badge > 0 && <span className="cv-badge">{badge > 9 ? '9+' : badge}</span>}
+                  </button>
+                )}
+                {isHovered && <div className="cv-tooltip">{label}</div>}
               </div>
             );
           })}
 
-          {/* Profile button */}
+          {/* Profile */}
           {(() => {
             const isActive = active === 'profile';
             const isHovered = hoveredNav === 'profile';
             return (
-              <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center' }}>
-                <button onClick={() => handleNavClick('profile')}
+              <div style={{ position: 'relative', width: '100%', display: 'flex', justifyContent: 'center', marginTop: 4 }}>
+                <button
+                  className={`cv-nav-btn${isActive ? ' active' : ''}`}
+                  onClick={() => handleNavClick('profile')}
                   onMouseEnter={() => setHoveredNav('profile')}
                   onMouseLeave={() => setHoveredNav(null)}
-                  style={{ width: 48, height: 48, borderRadius: 12, background: isActive ? '#18181b' : isHovered ? '#111' : 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.15s' }}>
+                >
                   <ProfileAvatar size={28} ring={isActive} />
                 </button>
-                {isHovered && <Tooltip label="Profile" />}
+                {isHovered && <div className="cv-tooltip">Profile</div>}
               </div>
             );
           })()}
         </nav>
       </div>
 
-      {/* MAIN CONTENT */}
-      <div className="main-content" style={{ flex: 1, marginLeft: 72, display: 'flex', flexDirection: 'column', overflow: 'hidden' }}>
+      {/* ── MAIN CONTENT ── */}
+      <div className="cv-main">
+
         {/* Mobile top bar */}
-        <div className="mobile-topbar" style={{ display: 'none', alignItems: 'center', justifyContent: 'space-between', padding: '10px 16px', borderBottom: '1px solid #27272a', flexShrink: 0, background: '#000' }}>
-          <span style={{ fontSize: 22, fontWeight: 900, fontStyle: 'italic', background: 'linear-gradient(to right,#ec4899,#ef4444,#eab308)', WebkitBackgroundClip: 'text', WebkitTextFillColor: 'transparent' }}>ChatApp</span>
-          <button style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative' }} onClick={() => handleNavClick('notifications')}>
-            <Bell size={24} color={active === 'notifications' ? '#fff' : '#71717a'} />
-            {unreadCount > 0 && (
-              <span style={{ position: 'absolute', top: -4, right: -4, background: '#ef4444', borderRadius: '50%', width: 16, height: 16, fontSize: 10, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                {unreadCount > 9 ? '9+' : unreadCount}
-              </span>
-            )}
-          </button>
+        <div className="cv-topbar">
+          <div className="cv-topbar-logo">
+            <div className="cv-topbar-logo-c">C</div>
+            <span className="cv-topbar-name">ChatVitte</span>
+          </div>
+          <div className="cv-topbar-actions">
+            <button className="cv-topbar-icon-btn" onClick={() => handleNavClick('search')}>
+              <Search size={22} color={active === 'search' ? '#fff' : undefined} />
+            </button>
+            <button className="cv-topbar-icon-btn" style={{ position: 'relative' }} onClick={() => handleNavClick('notifications')}>
+              <Bell size={22} color={active === 'notifications' ? '#fff' : undefined} />
+              {unreadCount > 0 && (
+                <span className="cv-badge" style={{ top: -3, right: -3 }}>{unreadCount > 9 ? '9+' : unreadCount}</span>
+              )}
+            </button>
+            <button className="cv-topbar-icon-btn" onClick={() => handleNavClick('profile')}>
+              <ProfileAvatar size={30} ring={active === 'profile'} />
+            </button>
+          </div>
         </div>
 
-        {/* Page content */}
+        {/* Page */}
         <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden' }}>
           {renderPage()}
         </div>
 
         {/* Mobile bottom nav */}
-        <div className="mobile-nav" style={{ display: 'none', alignItems: 'center', justifyContent: 'space-around', height: 56, borderTop: '1px solid #27272a', background: '#000', flexShrink: 0 }}>
-          {[
-            { id: 'home', icon: Home, filled: true },
-            { id: 'search', icon: Search, filled: false },
-            { id: 'create', icon: PlusSquare, filled: false },
-            { id: 'dms', icon: MessageCircle, filled: true },
-          ].map(({ id, icon: Icon, filled }) => (
-            <button key={id} onClick={() => handleNavClick(id)}
-              style={{ background: 'none', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 4 }}>
-              <Icon size={26} fill={active === id && filled ? '#fff' : 'none'} color={active === id ? '#fff' : '#71717a'} />
-            </button>
-          ))}
-          <button onClick={() => handleNavClick('profile')} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4 }}>
-            <ProfileAvatar size={28} ring={active === 'profile'} />
+        <div className="cv-bottom-nav">
+          {/* Home */}
+          <button className={`cv-bottom-item${active === 'home' ? ' active' : ''}`} onClick={() => handleNavClick('home')}>
+            <Home size={22} strokeWidth={active === 'home' ? 2.5 : 1.8} />
+            <span>Home</span>
+          </button>
+
+          {/* Discover */}
+          <button className={`cv-bottom-item${active === 'search' ? ' active' : ''}`} onClick={() => handleNavClick('search')}>
+            <Compass size={22} strokeWidth={active === 'search' ? 2.5 : 1.8} />
+            <span>Discover</span>
+          </button>
+
+          {/* Create — center pill */}
+          <div className="cv-bottom-create" onClick={() => handleNavClick('create')}>
+            <div className="cv-bottom-create-inner">
+              <PlusSquare size={22} color="#fff" strokeWidth={2.5} />
+            </div>
+          </div>
+
+          {/* Messages */}
+          <button className={`cv-bottom-item${active === 'dms' ? ' active' : ''}`} onClick={() => handleNavClick('dms')} style={{ position: 'relative' }}>
+            <MessageCircle size={22} strokeWidth={active === 'dms' ? 2.5 : 1.8} />
+            {unreadCount > 0 && <span className="cv-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}
+            <span>Messages</span>
+          </button>
+
+          {/* Profile */}
+          <button className={`cv-bottom-item${active === 'profile' ? ' active' : ''}`} onClick={() => handleNavClick('profile')}>
+            <ProfileAvatar size={24} ring={active === 'profile'} />
+            <span>Profile</span>
           </button>
         </div>
       </div>
-
-      {/* Messages floating bubble — HIDDEN when on DMs page */}
-      {active !== 'dms' && (
-        <button
-          className="messages-bubble"
-          onClick={() => handleNavClick('dms')}
-          style={{ position: 'fixed', bottom: 24, right: 24, zIndex: 30, background: '#18181b', border: '1px solid #27272a', borderRadius: 24, padding: '12px 20px', display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', color: '#fff', fontSize: 15, fontWeight: 600, boxShadow: '0 4px 24px rgba(0,0,0,0.5)' }}
-          onMouseEnter={e => e.currentTarget.style.background = '#27272a'}
-          onMouseLeave={e => e.currentTarget.style.background = '#18181b'}
-        >
-          <MessageCircle size={20} color="#fff" />
-          Messages
-          {unreadCount > 0 && (
-            <span style={{ background: '#ef4444', borderRadius: '50%', width: 18, height: 18, fontSize: 10, fontWeight: 700, color: '#fff', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-              {unreadCount > 9 ? '9+' : unreadCount}
-            </span>
-          )}
-        </button>
-      )}
-
-      <style>{`
-        @media (max-width: 900px) {
-          .sidebar-desktop { display: none !important; }
-          .main-content { margin-left: 0 !important; }
-          .mobile-topbar { display: flex !important; }
-          .mobile-nav { display: flex !important; }
-          .messages-bubble { display: none !important; }
-        }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
-      `}</style>
     </div>
   );
 };
