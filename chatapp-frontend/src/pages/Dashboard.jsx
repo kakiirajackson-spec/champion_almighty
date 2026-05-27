@@ -82,6 +82,32 @@ const Dashboard = () => {
     { id: 'settings', icon: Settings, label: 'Settings' },
   ];
 
+  // ── MISSING RENDER PAGE FUNCTION ADDED HERE ──
+  const renderPage = () => {
+    switch (active) {
+      case 'home':
+        return <HomeFeed token={token} currentUser={user} onViewProfile={handleViewProfile} onGoToDMs={handleGoToDMs} />;
+      case 'search':
+        return <SearchPage token={token} onViewProfile={handleViewProfile} />;
+      case 'reels':
+        return <Reels token={token} />;
+      case 'dms':
+        return <DMs token={token} userId={dmUserId} />;
+      case 'notifications':
+        return <Notifications token={token} />;
+      case 'create':
+        return <CreatePost token={token} onPostCreated={() => setActive('home')} />;
+      case 'profile':
+        return <Profile token={token} userId={viewUserId || user?.id} onViewProfile={handleViewProfile} onGoToDMs={handleGoToDMs} />;
+      case 'settings':
+        return <SettingsPage token={token} />;
+      case 'bookmarks':
+        return <div style={{ padding: '24px' }}><h3>Bookmarks Content Coming Soon</h3></div>;
+      default:
+        return <HomeFeed token={token} currentUser={user} onViewProfile={handleViewProfile} onGoToDMs={handleGoToDMs} />;
+    }
+  };
+
   return (
     <div style={{ display: 'flex', height: '100vh', background: '#000000', color: '#fff', overflow: 'hidden', fontFamily: "'Plus Jakarta Sans', 'DM Sans', sans-serif" }}>
 
