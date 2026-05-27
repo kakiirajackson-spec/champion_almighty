@@ -492,19 +492,7 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
     imgSrc={imgSrc}
   />
 ))}
-  currentUser={currentUser}
-  comments={comments}
-  commentText={commentText}
-  showComments={showComments}
-  onViewProfile={onViewProfile}
-  handleLike={handleLike}
-  handleComment={handleComment}
-  fetchComments={fetchComments}
-  setCommentText={setCommentText}
-  setShowComments={setShowComments}
-  formatTime={formatTime}
-  imgSrc={imgSrc}
-/>
+
 
         {/* ── TRENDING NOW ── */}
         {posts.length > 0 && (
