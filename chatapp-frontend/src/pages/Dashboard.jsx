@@ -9,6 +9,7 @@ import Profile from './Profile';
 import CreatePost from './CreatePost';
 import Notifications from './Notifications';
 import SettingsPage from './Settings';
+import RightSidebar from './RightSidebar'; // Make sure this path matches your file location
 import { BACKEND_URL } from '../api';
 
 const imgSrc = (url) => {
@@ -194,21 +195,33 @@ const Dashboard = () => {
           background: #000000;
         }
 
+        /* Enforce exact 3-column configuration framework widths */
         .cv-content-wrapper {
-          display: flex;
-          justify-content: center;
-          width: 100%;
-          max-width: 1200px;
-          margin: 0 auto;
-          height: 100%;
+          display: flex !important;
+          justify-content: center !important;
+          gap: 32px !important;
+          width: 100% !important;
+          max-width: 1140px !important;
+          margin: 0 auto !important;
+          height: 100% !important;
+          padding: 0 16px !important;
         }
 
         .cv-feed-container {
-          flex: 1;
-          max-width: 640px;
-          padding: 24px 16px;
-          height: 100%;
-          overflow-y: auto;
+          flex: 1 !important;
+          max-width: 680px !important;
+          width: 100% !important;
+          padding: 24px 0 !important;
+          height: 100% !important;
+          overflow-y: auto !important;
+        }
+
+        .cv-sidebar-right-panel {
+          width: 340px !important;
+          flex-shrink: 0 !important;
+          padding: 24px 0 !important;
+          height: 100% !important;
+          overflow-y: auto !important;
         }
 
         .cv-sidebar-profile {
@@ -267,13 +280,14 @@ const Dashboard = () => {
           .cv-topbar { display: flex !important; }
           .cv-bottom-nav { display: flex !important; }
           .cv-feed-container { max-width: 100% !important; }
+          .cv-sidebar-right-panel { display: none !important; }
         }
       `}</style>
 
       {/* ── DESKTOP SIDEBAR ── */}
       <div className="cv-sidebar">
         <div style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '0 12px 28px' }}>
-          <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #ff4d00, #c800ff)', display: 'flex', alignItems: 'center', justifyCentent: 'center', fontFamily: 'Syne', fontSize: 18, fontWeight: 900, color: '#fff' }}>C</div>
+          <div style={{ width: 32, height: 32, borderRadius: 9, background: 'linear-gradient(135deg, #ff4d00, #c800ff)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Syne', fontSize: 18, fontWeight: 900, color: '#fff' }}>C</div>
           <span style={{ fontFamily: 'Syne', fontSize: 20, fontWeight: 800, letterSpacing: '-0.5px' }}>ChatVitte</span>
         </div>
 
@@ -309,7 +323,7 @@ const Dashboard = () => {
         </button>
       </div>
 
-      {/* ── MAIN CONTENT ── */}
+      {/* ── MAIN CONTENT AREA ── */}
       <div className="cv-main">
         {/* Mobile top bar */}
         <div className="cv-topbar">
@@ -324,12 +338,21 @@ const Dashboard = () => {
           </div>
         </div>
 
-        {/* Page Container Wrapper */}
+        {/* 3-Column Structured Layout Flex Container Wrapper */}
         <div className="cv-content-wrapper">
-          {/* Centered structured feed container */}
+          
+          {/* Column 2: Central Interactive Feeds area */}
           <div className="cv-feed-container">
             {renderPage()}
           </div>
+
+          {/* Column 3: Fixed Right Sidebar Suggestions & Live panels (Shows only on Home feed) */}
+          {active === 'home' && (
+            <div className="cv-sidebar-right-panel">
+              <RightSidebar token={token} currentUser={user} onViewProfile={handleViewProfile} />
+            </div>
+          )}
+
         </div>
 
         {/* Mobile bottom nav */}

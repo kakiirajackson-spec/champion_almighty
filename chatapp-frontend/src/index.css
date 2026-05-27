@@ -20,3 +20,27 @@ body {
   object-fit: cover;
   display: block;
 }
+/* Enforce strict layout boundaries to fix the massive layout gap */
+.cv-dashboard-container {
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  max-width: 1200px !important;
+  margin: 0 auto !important;
+  padding: 0 20px !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+/* Tightens the center column */
+.cv-main-feed-area {
+  flex: 1 !important;
+  max-width: 640px !important;
+  width: 100% !important;
+}
+
+/* Fixes the right sidebar width */
+.cv-right-sidebar-area {
+  width: 340px !important;
+  flex-shrink: 0 !important;
+}
