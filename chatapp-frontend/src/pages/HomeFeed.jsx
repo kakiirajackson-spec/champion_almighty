@@ -125,247 +125,497 @@ const HomeFeed = ({ token, currentUser, onViewProfile }) => {
 
   const currentStory = storyView ? storyView.group.stories[storyView.index] : null;
 
-  return (
-    <div style={{ display: 'flex', justifyContent: 'center', background: '#000', minHeight: '100%' }}>
-      <div style={{ width: '100%', maxWidth: 470, paddingBottom: 40 }}>
+ return (
+  <div
+    style={{
+      display: "flex",
+      justifyContent: "center",
+      background: "#000",
+      minHeight: "100%",
+      color: "#fff",
+    }}
+  >
 
-        {/* Story Viewer */}
-        {storyView && currentStory && (
-          <div style={{ position: 'fixed', inset: 0, zIndex: 50, background: '#000', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-            <div style={{ position: 'relative', width: '100%', maxWidth: 400, height: '100vh' }}>
-              <div style={{ position: 'absolute', top: 12, left: 12, right: 12, display: 'flex', gap: 4, zIndex: 10 }}>
-                {storyView.group.stories.map((_, i) => (
-                  <div key={i} style={{ flex: 1, height: 2, borderRadius: 99, background: i <= storyView.index ? '#fff' : 'rgba(255,255,255,0.3)' }} />
-                ))}
-              </div>
-              <div style={{ position: 'absolute', top: 28, left: 16, right: 16, display: 'flex', alignItems: 'center', justifyContent: 'space-between', zIndex: 10 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 14, border: '2px solid #fff' }}>
-                    {storyView.group.profile_picture
-                      ? <img src={imgSrc(storyView.group.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                      : storyView.group.username?.[0]?.toUpperCase()
-                    }
-                  </div>
-                  <span style={{ fontSize: 14, fontWeight: 600, color: '#fff' }}>{storyView.group.username}</span>
-                </div>
-                <button onClick={() => setStoryView(null)} style={{ background: 'none', border: 'none', cursor: 'pointer' }}>
-                  <X size={24} color="#fff" />
-                </button>
-              </div>
-              {currentStory.media_type === 'video'
-                ? <video src={imgSrc(currentStory.media_url)} autoPlay style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <img src={imgSrc(currentStory.media_url)} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-              }
-              <button style={{ position: 'absolute', left: 0, top: 0, width: '50%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', zIndex: 20 }}
-                onClick={() => storyView.index > 0 ? setStoryView({ ...storyView, index: storyView.index - 1 }) : setStoryView(null)} />
-              <button style={{ position: 'absolute', right: 0, top: 0, width: '50%', height: '100%', background: 'none', border: 'none', cursor: 'pointer', zIndex: 20 }}
-                onClick={() => storyView.index < storyView.group.stories.length - 1 ? setStoryView({ ...storyView, index: storyView.index + 1 }) : setStoryView(null)} />
-            </div>
-          </div>
-        )}
+    {/* MAIN FEED */}
+    <div
+      style={{
+        width: "100%",
+        maxWidth: 620,
+        padding: "24px 20px 80px",
+      }}
+    >
 
-        {/* Stories Bar */}
-        <div style={{ display: 'flex', gap: 12, padding: '12px 16px', overflowX: 'auto', borderBottom: '1px solid #27272a' }}>
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0, position: 'relative' }}>
-            {myStories.length > 0 ? (
-              <>
-                <button onClick={() => setStoryView({ group: { user_id: currentUser?.id, username: currentUser?.username, profile_picture: currentUser?.profile_picture, stories: myStories }, index: 0 })}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                  <div style={{ width: 66, height: 66, borderRadius: '50%', padding: 2, background: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)' }}>
-                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', padding: 2, background: '#000' }}>
-                      <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden' }}>
-                        {myStories[0].media_type === 'image'
-                          ? <img src={imgSrc(myStories[0].media_url)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                          : <div style={{ width: '100%', height: '100%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: 20 }}>{currentUser?.username?.[0]?.toUpperCase()}</div>
-                        }
-                      </div>
-                    </div>
-                  </div>
-                </button>
-                <label style={{ position: 'absolute', bottom: 22, right: 0, width: 20, height: 20, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #000', cursor: 'pointer' }}>
-                  <Plus size={10} color="#fff" />
-                  <input type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleStory} />
-                </label>
-              </>
-            ) : (
-              <label style={{ cursor: 'pointer' }}>
-                <div style={{ width: 66, height: 66, borderRadius: '50%', padding: 2, background: '#3f3f46' }}>
-                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', padding: 2, background: '#000' }}>
-                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 20, fontWeight: 'bold', position: 'relative', overflow: 'hidden' }}>
-                      {currentUser?.profile_picture
-                        ? <img src={imgSrc(currentUser.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                        : currentUser?.username?.[0]?.toUpperCase()
-                      }
-                      <div style={{ position: 'absolute', bottom: 0, right: 0, width: 20, height: 20, borderRadius: '50%', background: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', border: '2px solid #000' }}>
-                        <Plus size={10} color="#fff" />
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <input type="file" accept="image/*,video/*" style={{ display: 'none' }} onChange={handleStory} />
-              </label>
-            )}
-            <span style={{ fontSize: 10, color: '#a1a1aa' }}>Your story</span>
-          </div>
+      {/* TOP GREETING */}
+      <div
+        style={{
+          marginBottom: 26,
+        }}
+      >
+        <h1
+          style={{
+            fontSize: 32,
+            fontWeight: 800,
+            margin: 0,
+            letterSpacing: -1,
+          }}
+        >
+          Welcome back,
+          <span
+            style={{
+              background:
+                "linear-gradient(90deg,#a855f7,#ec4899,#ef4444)",
+              WebkitBackgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+            }}
+          >
+            {" "}
+            {currentUser?.username}
+          </span>
+        </h1>
 
-          {stories.map(group => (
-            <div key={group.user_id} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 4, flexShrink: 0 }}>
-              <button onClick={() => setStoryView({ group, index: 0 })} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <div style={{ width: 66, height: 66, borderRadius: '50%', padding: 2, background: 'linear-gradient(45deg,#f09433,#e6683c,#dc2743,#cc2366,#bc1888)' }}>
-                  <div style={{ width: '100%', height: '100%', borderRadius: '50%', padding: 2, background: '#000' }}>
-                    <div style={{ width: '100%', height: '100%', borderRadius: '50%', overflow: 'hidden', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#3f3f46', fontWeight: 'bold', fontSize: 20 }}>
-                      {group.profile_picture
-                        ? <img src={imgSrc(group.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                        : group.username?.[0]?.toUpperCase()
-                      }
-                    </div>
-                  </div>
-                </div>
-              </button>
-              <span style={{ fontSize: 10, color: '#a1a1aa', maxWidth: 66, textAlign: 'center', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{group.username}</span>
-            </div>
-          ))}
+        <p
+          style={{
+            color: "#71717a",
+            marginTop: 6,
+            fontSize: 14,
+          }}
+        >
+          Discover creative people around the world.
+        </p>
+      </div>
+
+      {/* STORIES */}
+<div
+  style={{
+    display: "flex",
+    gap: 16,
+    overflowX: "auto",
+    paddingBottom: 20,
+    marginBottom: 28,
+  }}
+>
+
+  {/* YOUR STORY */}
+  <label
+    style={{
+      display: "flex",
+      flexDirection: "column",
+      alignItems: "center",
+      gap: 8,
+      cursor: "pointer",
+      flexShrink: 0,
+    }}
+  >
+    <div
+      style={{
+        width: 74,
+        height: 74,
+        borderRadius: "50%",
+        padding: 3,
+        background:
+          "linear-gradient(135deg,#a855f7,#ec4899,#ef4444)",
+      }}
+    >
+      <div
+        style={{
+          width: "100%",
+          height: "100%",
+          borderRadius: "50%",
+          overflow: "hidden",
+          background: "#111",
+          padding: 3,
+        }}
+      >
+        <img
+          src={imgSrc(currentUser?.profile_picture)}
+          alt=""
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: "50%",
+            objectFit: "cover",
+          }}
+        />
+      </div>
+    </div>
+
+    <span
+      style={{
+        fontSize: 12,
+        color: "#a1a1aa",
+      }}
+    >
+      Your Story
+    </span>
+
+    <input
+      type="file"
+      accept="image/*,video/*"
+      style={{ display: "none" }}
+      onChange={handleStory}
+    />
+  </label>
+
+  {/* OTHER STORIES */}
+  {stories.map((group) => (
+    <div
+      key={group.user_id}
+      onClick={() =>
+        setStoryView({
+          group,
+          index: 0,
+        })
+      }
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        alignItems: "center",
+        gap: 8,
+        cursor: "pointer",
+        flexShrink: 0,
+      }}
+    >
+      <div
+        style={{
+          width: 74,
+          height: 74,
+          borderRadius: "50%",
+          padding: 3,
+          background:
+            "linear-gradient(135deg,#a855f7,#ec4899,#ef4444)",
+        }}
+      >
+        <div
+          style={{
+            width: "100%",
+            height: "100%",
+            borderRadius: "50%",
+            overflow: "hidden",
+            background: "#111",
+            padding: 3,
+          }}
+        >
+          <img
+            src={imgSrc(group.profile_picture)}
+            alt=""
+            style={{
+              width: "100%",
+              height: "100%",
+              borderRadius: "50%",
+              objectFit: "cover",
+            }}
+          />
         </div>
+      </div>
 
-        {isPopular && posts.length > 0 && (
-          <div style={{ padding: '10px 16px', display: 'flex', alignItems: 'center', gap: 8 }}>
-            <div style={{ flex: 1, height: 1, background: '#27272a' }} />
-            <span style={{ fontSize: 12, color: '#71717a', fontWeight: 600, whiteSpace: 'nowrap' }}>✨ Suggested for you</span>
-            <div style={{ flex: 1, height: 1, background: '#27272a' }} />
+      <span
+        style={{
+          fontSize: 12,
+          color: "#a1a1aa",
+          maxWidth: 80,
+          overflow: "hidden",
+          textOverflow: "ellipsis",
+          whiteSpace: "nowrap",
+        }}
+      >
+        {group.username}
+      </span>
+    </div>
+  ))}
+</div>
+
+      {/* CREATE THOUGHT BOX */}
+      <div
+        style={{
+          background: "rgba(255,255,255,0.03)",
+          border: "1px solid rgba(255,255,255,0.06)",
+          borderRadius: 24,
+          padding: 20,
+          marginBottom: 32,
+          backdropFilter: "blur(20px)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+          }}
+        >
+          <div
+            style={{
+              width: 46,
+              height: 46,
+              borderRadius: "50%",
+              overflow: "hidden",
+            }}
+          >
+            <img
+              src={imgSrc(currentUser?.profile_picture)}
+              alt=""
+              style={{
+                width: "100%",
+                height: "100%",
+                objectFit: "cover",
+              }}
+            />
           </div>
-        )}
 
-        {posts.length === 0 && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', padding: '80px 0', color: '#52525b', gap: 12 }}>
-            <MessageCircle size={48} />
-            <p style={{ fontSize: 14, textAlign: 'center' }}>No posts yet.<br />Be the first to post!</p>
-          </div>
-        )}
+          <button
+            style={{
+              flex: 1,
+              height: 50,
+              borderRadius: 999,
+              border: "none",
+              background: "#111",
+              color: "#71717a",
+              textAlign: "left",
+              padding: "0 20px",
+              fontSize: 15,
+              cursor: "pointer",
+            }}
+          >
+            Share your vibe today...
+          </button>
+        </div>
+      </div>
 
-        {posts.map(post => (
-          <div key={post.id} style={{ borderBottom: '1px solid #27272a' }}>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '10px 12px' }}>
-              <button onClick={() => onViewProfile && onViewProfile(post.user_id)}
-                style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14, fontWeight: 'bold', flexShrink: 0 }}>
-                  {post.profile_picture
-                    ? <img src={imgSrc(post.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                    : post.username?.[0]?.toUpperCase()
-                  }
-                </div>
-                <div style={{ textAlign: 'left' }}>
-                  <p style={{ fontSize: 14, fontWeight: 600, margin: 0, color: '#fff' }}>{post.username}</p>
-                  <p style={{ fontSize: 10, color: '#71717a', margin: 0 }}>{formatTime(post.created_at)}</p>
-                </div>
-              </button>
-              <MoreHorizontal size={20} color="#71717a" />
-            </div>
+      {/* POSTS */}
+      {posts.map((post) => (
+        <div
+          key={post.id}
+          style={{
+            marginBottom: 34,
+          }}
+        >
 
-            <div style={{ position: 'relative', width: '100%', paddingBottom: '100%', background: '#18181b', overflow: 'hidden' }}>
-              {post.media_type === 'video'
-                ? <video src={imgSrc(post.media_url)} controls style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-                : <img src={imgSrc(post.media_url)} alt="post" style={{ position: 'absolute', top: 0, left: 0, width: '100%', height: '100%', objectFit: 'cover' }} />
-              }
-            </div>
-
-            <div style={{ padding: '10px 12px 8px' }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                  <button onClick={() => handleLike(post.id, post.is_liked)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                    <Heart size={26} fill={post.is_liked ? '#ef4444' : 'none'} color={post.is_liked ? '#ef4444' : '#fff'} />
-                  </button>
-                  <button onClick={() => { setShowComments(p => ({ ...p, [post.id]: !p[post.id] })); fetchComments(post.id); }}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}>
-                    <MessageCircle size={26} color="#fff" />
-                  </button>
-                  <Send size={24} color="#fff" />
-                </div>
-                <Bookmark size={24} color="#fff" />
-              </div>
-              <p style={{ fontSize: 14, fontWeight: 'bold', margin: '0 0 4px' }}>{Number(post.likes_count || 0).toLocaleString()} likes</p>
-              {post.caption && (
-                <p style={{ fontSize: 14, margin: '0 0 4px', color: '#fff' }}>
-                  <span style={{ fontWeight: 600, marginRight: 4 }}>{post.username}</span>{post.caption}
-                </p>
-              )}
-              {post.comments_count > 0 && (
-                <button onClick={() => { setShowComments(p => ({ ...p, [post.id]: !p[post.id] })); fetchComments(post.id); }}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', fontSize: 12, padding: 0, marginBottom: 4, display: 'block' }}>
-                  View all {post.comments_count} comments
-                </button>
-              )}
-              {showComments[post.id] && (
-                <div style={{ marginBottom: 8 }}>
-                  {(comments[post.id] || []).map(c => (
-                    <p key={c.id} style={{ fontSize: 14, margin: '2px 0', color: '#fff' }}>
-                      <span style={{ fontWeight: 600, marginRight: 4 }}>{c.username}</span>{c.content}
-                    </p>
-                  ))}
-                </div>
-              )}
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8, borderTop: '1px solid #27272a', paddingTop: 8 }}>
-                <div style={{ width: 24, height: 24, borderRadius: '50%', overflow: 'hidden', background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 10, fontWeight: 'bold', flexShrink: 0 }}>
-                  {currentUser?.profile_picture
-                    ? <img src={imgSrc(currentUser.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                    : currentUser?.username?.[0]?.toUpperCase()
-                  }
-                </div>
-                <input type="text" placeholder="Add a comment..."
-                  value={commentText[post.id] || ''}
-                  onChange={(e) => setCommentText(p => ({ ...p, [post.id]: e.target.value }))}
-                  onKeyDown={(e) => e.key === 'Enter' && handleComment(post.id)}
-                  style={{ flex: 1, background: 'transparent', border: 'none', outline: 'none', color: '#fff', fontSize: 13 }}
+          {/* HEADER */}
+          <div
+            style={{
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "space-between",
+              marginBottom: 14,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+              }}
+            >
+              <div
+                style={{
+                  width: 44,
+                  height: 44,
+                  borderRadius: "50%",
+                  overflow: "hidden",
+                }}
+              >
+                <img
+                  src={imgSrc(post.profile_picture)}
+                  alt=""
+                  style={{
+                    width: "100%",
+                    height: "100%",
+                    objectFit: "cover",
+                  }}
                 />
-                {commentText[post.id] && (
-                  <button onClick={() => handleComment(post.id)}
-                    style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: 12, fontWeight: 'bold' }}>
-                    Post
-                  </button>
-                )}
+              </div>
+
+              <div>
+                <div
+                  style={{
+                    fontWeight: 700,
+                    fontSize: 15,
+                  }}
+                >
+                  {post.username}
+                </div>
+
+                <div
+                  style={{
+                    color: "#71717a",
+                    fontSize: 12,
+                  }}
+                >
+                  {formatTime(post.created_at)}
+                </div>
               </div>
             </div>
+
+            <MoreHorizontal size={18} color="#71717a" />
+          </div>
+
+          {/* IMAGE */}
+          <div
+            style={{
+              borderRadius: 30,
+              overflow: "hidden",
+              background: "#111",
+            }}
+          >
+            <img
+              src={imgSrc(post.media_url)}
+              alt=""
+              style={{
+                width: "100%",
+                display: "block",
+                objectFit: "cover",
+                maxHeight: 720,
+              }}
+            />
+          </div>
+
+          {/* ACTIONS */}
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "space-between",
+              marginTop: 16,
+            }}
+          >
+            <div
+              style={{
+                display: "flex",
+                gap: 20,
+              }}
+            >
+              <Heart size={24} />
+              <MessageCircle size={24} />
+              <Send size={22} />
+            </div>
+
+            <Bookmark size={22} />
+          </div>
+
+          {/* CAPTION */}
+          <div
+            style={{
+              marginTop: 14,
+            }}
+          >
+            <div
+              style={{
+                fontWeight: 700,
+                marginBottom: 5,
+              }}
+            >
+              {Number(post.likes_count || 0).toLocaleString()} vibes
+            </div>
+
+            <div
+              style={{
+                color: "#d4d4d8",
+                lineHeight: 1.6,
+              }}
+            >
+              <span
+                style={{
+                  fontWeight: 700,
+                  marginRight: 6,
+                  color: "#fff",
+                }}
+              >
+                {post.username}
+              </span>
+
+              {post.caption}
+            </div>
+          </div>
+        </div>
+      ))}
+    </div>
+
+    {/* RIGHT PANEL */}
+    <div
+      className="right-sidebar"
+      style={{
+        width: 320,
+        padding: "30px 24px",
+      }}
+    >
+
+      {/* USER MINI CARD */}
+      <div
+        style={{
+          background: "rgba(255,255,255,0.03)",
+          borderRadius: 28,
+          padding: 22,
+          marginBottom: 28,
+          border: "1px solid rgba(255,255,255,0.05)",
+        }}
+      >
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: 14,
+          }}
+        >
+          <img
+            src={imgSrc(currentUser?.profile_picture)}
+            alt=""
+            style={{
+              width: 58,
+              height: 58,
+              borderRadius: "50%",
+              objectFit: "cover",
+            }}
+          />
+
+          <div>
+            <div
+              style={{
+                fontWeight: 700,
+                fontSize: 16,
+              }}
+            >
+              {currentUser?.username}
+            </div>
+
+            <div
+              style={{
+                color: "#71717a",
+                fontSize: 13,
+              }}
+            >
+              Creative Explorer
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* TRENDING */}
+      <div>
+        <h3
+          style={{
+            marginBottom: 18,
+            fontSize: 18,
+          }}
+        >
+          Trending Spaces
+        </h3>
+
+        {["Design", "Music", "Street", "Fashion"].map((item) => (
+          <div
+            key={item}
+            style={{
+              marginBottom: 14,
+              padding: 16,
+              borderRadius: 18,
+              background: "#0b0b0b",
+              cursor: "pointer",
+            }}
+          >
+            #{item}
           </div>
         ))}
       </div>
-
-      {/* RIGHT SIDEBAR */}
-      <div className="right-sidebar" style={{ width: 280, flexShrink: 0, padding: '32px 0 24px 24px', position: 'sticky', top: 0, height: '100vh', overflowY: 'auto' }}>
-        {suggested.length > 0 && (
-          <>
-            <p style={{ fontSize: 13, fontWeight: 700, color: '#71717a', margin: '0 0 16px' }}>Suggested for you</p>
-            {suggested.map(u => (
-              <div key={u.id} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 14 }}>
-                <button onClick={() => onViewProfile && onViewProfile(u.id)}
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, background: 'none', border: 'none', cursor: 'pointer', padding: 0, flex: 1, minWidth: 0 }}>
-                  <div style={{ width: 36, height: 36, borderRadius: '50%', overflow: 'hidden', flexShrink: 0, background: 'linear-gradient(135deg,#a855f7,#ec4899)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: 14, color: '#fff' }}>
-                    {u.profile_picture
-                      ? <img src={imgSrc(u.profile_picture)} style={{ width: '100%', height: '100%', objectFit: 'cover' }} alt="" />
-                      : u.username?.[0]?.toUpperCase()
-                    }
-                  </div>
-                  <div style={{ minWidth: 0, textAlign: 'left' }}>
-                    <p style={{ fontSize: 13, fontWeight: 600, margin: 0, color: '#fff', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{u.username}</p>
-                    <p style={{ fontSize: 11, color: '#71717a', margin: 0 }}>Suggested for you</p>
-                  </div>
-                </button>
-                <button onClick={() => handleFollow(u.id)}
-                  style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#3b82f6', fontSize: 12, fontWeight: 700, flexShrink: 0, marginLeft: 8 }}>
-                  Follow
-                </button>
-              </div>
-            ))}
-          </>
-        )}
-      </div>
-
-      <style>{`
-        @media (max-width: 1100px) { .right-sidebar { display: none !important; } }
-        ::-webkit-scrollbar { width: 4px; }
-        ::-webkit-scrollbar-track { background: #000; }
-        ::-webkit-scrollbar-thumb { background: #27272a; border-radius: 4px; }
-      `}</style>
     </div>
-  );
+  </div>
+);
 };
 
 export default HomeFeed;
