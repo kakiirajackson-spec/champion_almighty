@@ -19,9 +19,7 @@ const Login = () => {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ emailOrUsername, password }),
       });
-
       const data = await response.json();
-
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
@@ -38,49 +36,48 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-black font-sans text-white">
-      <div className="flex flex-col md:flex-row max-w-5xl w-full gap-12 items-center justify-center">
+    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '24px', background: '#0b0d14', fontFamily: 'sans-serif', color: '#fff' }}>
+      <div style={{ display: 'flex', flexDirection: 'row', maxWidth: '900px', width: '100%', gap: '48px', alignItems: 'center', justifyContent: 'center' }}>
 
         {/* Left Side: Logo */}
-        <div className="hidden md:flex flex-col items-center space-y-6 flex-1">
-          <div className="p-[3px] rounded-[24px] bg-gradient-to-tr from-[#f09433] via-[#dc2743] to-[#bc1888]">
-            <div className="bg-black rounded-[22px] p-5">
+        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '24px', flex: '1' }}>
+          <div style={{ padding: '3px', borderRadius: '24px', background: 'linear-gradient(135deg, #f09433, #dc2743, #bc1888)' }}>
+            <div style={{ background: '#0b0d14', borderRadius: '22px', padding: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
               <Send size={60} color="white" />
             </div>
           </div>
-          <h1 className="text-[3rem] font-black italic tracking-tighter">ChatApp</h1>
-          <p className="text-zinc-500 text-lg">Connect with your world in real-time.</p>
+          <h1 style={{ fontSize: '3rem', fontWeight: '900', fontStyle: 'italic', letterSpacing: '-2px', margin: 0, color: '#fff' }}>ChatVitte</h1>
+          <p style={{ color: '#71717a', fontSize: '18px', margin: 0 }}>Connect with your world in real-time.</p>
         </div>
 
         {/* Right Side: Form */}
-        <div className="w-full max-w-sm space-y-4">
-          <div className="bg-black border border-zinc-800 rounded-xl p-10 shadow-2xl">
-            <h2 className="text-2xl font-bold mb-6 text-center">Login</h2>
-            <form className="space-y-4" onSubmit={handleLogin}>
+        <div style={{ width: '100%', maxWidth: '360px', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+          <div style={{ background: '#111118', border: '1px solid #27272a', borderRadius: '16px', padding: '40px', boxShadow: '0 25px 50px rgba(0,0,0,0.5)' }}>
+            <h2 style={{ fontSize: '22px', fontWeight: '700', marginBottom: '24px', textAlign: 'center', color: '#fff', marginTop: 0 }}>Login</h2>
+            <form onSubmit={handleLogin} style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
 
               <input
                 type="text"
                 placeholder="Email or Username"
-                className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-md text-white text-sm focus:outline-none focus:border-zinc-500"
                 value={emailOrUsername}
                 onChange={(e) => setEmailOrUsername(e.target.value)}
                 required
+                style={{ width: '100%', padding: '12px', background: '#18181b', border: '1px solid #27272a', borderRadius: '8px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box', fontFamily: 'sans-serif' }}
               />
 
               <div style={{ position: 'relative' }}>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   placeholder="Password"
-                  className="w-full p-3 bg-zinc-900 border border-zinc-800 rounded-md text-white text-sm focus:outline-none focus:border-zinc-500"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  style={{ paddingRight: 44 }}
                   required
+                  style={{ width: '100%', padding: '12px', paddingRight: '44px', background: '#18181b', border: '1px solid #27272a', borderRadius: '8px', color: '#fff', fontSize: '14px', outline: 'none', boxSizing: 'border-box', fontFamily: 'sans-serif' }}
                 />
                 <button
                   type="button"
                   onClick={() => setShowPassword(p => !p)}
-                  style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', padding: 0, display: 'flex' }}
+                  style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#71717a', padding: 0, display: 'flex' }}
                 >
                   {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
                 </button>
@@ -89,27 +86,26 @@ const Login = () => {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full py-2.5 bg-[#0095f6] hover:bg-[#1877f2] text-white font-bold rounded-lg text-sm mt-2 transition-all active:scale-95"
-                style={{ opacity: loading ? 0.7 : 1 }}
+                style={{ width: '100%', padding: '10px', background: 'linear-gradient(135deg, #ff4d00, #c800ff)', border: 'none', borderRadius: '10px', color: '#fff', fontWeight: '700', fontSize: '14px', marginTop: '8px', cursor: 'pointer', opacity: loading ? 0.7 : 1, fontFamily: 'sans-serif' }}
               >
                 {loading ? 'Logging in...' : 'Log In'}
               </button>
 
-              <div className="flex items-center gap-3 my-4">
-                <div className="flex-1 h-[1px] bg-zinc-800"></div>
-                <span className="text-xs text-zinc-500 font-bold tracking-widest">OR</span>
-                <div className="flex-1 h-[1px] bg-zinc-800"></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '12px', margin: '8px 0' }}>
+                <div style={{ flex: 1, height: '1px', background: '#27272a' }}></div>
+                <span style={{ fontSize: '11px', color: '#71717a', fontWeight: '700', letterSpacing: '2px' }}>OR</span>
+                <div style={{ flex: 1, height: '1px', background: '#27272a' }}></div>
               </div>
 
-              <div className="text-center">
-                <Link to="/reset" className="text-xs text-zinc-400 hover:text-white">Forgot password?</Link>
+              <div style={{ textAlign: 'center' }}>
+                <Link to="/reset" style={{ fontSize: '12px', color: '#a1a1aa', textDecoration: 'none' }}>Forgot password?</Link>
               </div>
             </form>
           </div>
 
-          <div className="bg-black border border-zinc-800 rounded-xl p-5 text-center text-sm shadow-xl">
+          <div style={{ background: '#111118', border: '1px solid #27272a', borderRadius: '16px', padding: '20px', textAlign: 'center', fontSize: '14px' }}>
             Don't have an account?{' '}
-            <Link to="/register" className="text-[#0095f6] font-bold hover:underline">Sign up</Link>
+            <Link to="/register" style={{ color: '#ff4d00', fontWeight: '700', textDecoration: 'none' }}>Sign up</Link>
           </div>
         </div>
       </div>
