@@ -5,7 +5,6 @@ body {
   color: #ffffff;
   -webkit-font-smoothing: antialiased;
 }
-
 html, #root {
   background-color: #0b0d14;
   min-height: 100vh;
