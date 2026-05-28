@@ -66,7 +66,7 @@ const Dashboard = () => {
     <>
       <style>{`
         @import url('https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500;600;700&display=swap');
-        *{box-sizing:border-box;margin:0;padding:0}
+        *{box-sizing:border-box;}
         html,body,#root{background:#0b0d14!important;color:#fff;height:100%}
         .cv-nav-btn:hover{background:#111120!important;color:#c8c8d8!important}
         .cv-nav-btn.cv-active{background:#141428!important;color:#fff!important}

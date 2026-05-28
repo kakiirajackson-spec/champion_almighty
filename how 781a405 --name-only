@@ -1,0 +1,66 @@
+[33mbac1102[m[33m ([m[1;36mHEAD[m[33m -> [m[1;32mmaster[m[33m, [m[1;31morigin/main[m[33m)[m fix layout and background
+[33mc6d8c7d[m fix layout and background
+[33m8808a1d[m[33m ([m[1;31morigin/master[m[33m)[m style: center main feed layout to match original mockup width
+[33m781a405[m style: center main feed layout to match original mockup width
+[33m429218b[m style: center main feed layout to match original mockup width
+[33mb899d8c[m style: center main feed layout to match original mockup width
+[33m517ef7d[m style: center main feed layout to match original mockup width
+[33mdf6eb99[m style: center main feed layout to match original mockup width
+[33mad3dcf5[m style: center main feed layout to match original mockup width
+[33mb9b934e[m style: center main feed layout to match original mockup width
+[33m57f3373[m style: center main feed layout to match original mockup width
+[33m93e4aab[m style: center main feed layout to match original mockup width
+[33m97202d0[m style: center main feed layout to match original mockup width
+[33mca84dd0[m new dashboard design
+[33m8ff4e61[m new dashboard design
+[33mfa8270b[m new dashboard design
+[33m221460e[m new dashboard design
+[33me709afd[m new dashboard design
+[33m164a8d2[m new dashboard design
+[33m13d76cd[m new dashboard design
+[33m1b35bef[m new dashboard design
+[33mf331d18[m new dashboard design
+[33m2464770[m new dashboard design
+[33m82712cf[m new dashboard design
+[33m0aa0f71[m new dashboard design
+[33m10a4cc4[m new dashboard design
+[33m3a33017[m new dashboard design
+[33m307b881[m new dashboard design
+[33mb0e54f6[m new dashboard design
+[33m5a1d7c6[m new dashboard design
+[33mf499ccb[m new dashboard design
+[33m5db8486[m fix voice notes, read receipts, unread badge
+[33m6e3cbcc[m fix voice notes, read receipts, unread badge
+[33m37100d1[m fix voice notes, read receipts, unread badge
+[33mab1fd87[m fix voice notes, read receipts, unread badge
+[33m731a2df[m fix voice notes, read receipts, unread badge
+[33m02c8568[m fix voice notes, read receipts, unread badge
+[33mba2ab3c[m fix voice notes, read receipts, unread badge
+[33m8be2ce9[m fix voice notes, read receipts, unread badge
+[33me28b588[m fix voice notes
+[33mf69b967[m fix voice notes
+[33ma89ec9d[m fix voice notes
+[33m8f5cfca[m fix voice notes
+[33m9834dac[m fix messages route remove missing upload middleware
+[33m9dbe070[m fix voice notes
+[33m6c9e02d[m fix voice notes
+[33mf5358ee[m clean api config
+[33mfc4f9cd[m fix skipping login and go dierectly to dashboard
+[33mf528482[m add voicenote in dms and emojis
+[33m3337681[m fix DMs profile pics, online dot, hide messages bubble on DMs
+[33m68b3149[m fix dashboard
+[33m1d40d8c[m fix search show all users on open
+[33m307b32a[m fix profile images cloudinary + local urls
+[33m876065c[m add cloudinary image storage
+[33m01911f0[m fix sidebar icons only + popular posts feed
+[33md23fdb0[m add popular posts route
+[33me55b91c[m show all posts in feed
+[33mb66a3f9[m fix search show all users
+[33m84946c7[m fix CORS allow all origins
+[33mb2f40f1[m fix routing for vercel
+[33mde3b48a[m fix CreatePost filename case
+[33mb6e01a4[m update API url for production
+[33me95144d[m final version
+[33mafcc27b[m Update .gitignore to ignore node_modules
+[33mbda0e9a[m Remove node_modules from repo
+[33m613a4c2[m Initial commit
