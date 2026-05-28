@@ -1,12 +1,12 @@
-@import "tailwindcss";
-
 body {
   margin: 0;
   padding: 0;
+  background-color: #0b0d14;
+  color: #ffffff;
   -webkit-font-smoothing: antialiased;
 }
 
-html, body, #root {
-  background-color: #0b0d14 !important;
+html, #root {
+  background-color: #0b0d14;
   min-height: 100vh;
 }
